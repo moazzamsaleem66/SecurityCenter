@@ -1,0 +1,276 @@
+'use strict';
+// Deterministic rule table. One entry = one rule.
+//  sc: scanner step (code|network|android|ios|flutter|config)   kind: vulnerability|risk|best-practice|quality|info
+//  files: path regex   re: per-line regex   ml: whole-file regex   check(text,rel,lines): custom hits [{line,...}]
+//  near: context lines (+/-) passed to refine   refine(c): false=drop, object=override fields
+//  oncePerFile: report first hit only     tests: also run on test/example files
+
+const DART = /\.dart$/, JVM = /\.(kt|java)$/, SWIFT = /\.(swift|m|mm)$/, JS = /\.(js|jsx|ts|tsx|mjs|cjs|vue)$/, PY = /\.py$/;
+const CODE = /\.(dart|kt|java|swift|m|mm|js|jsx|ts|tsx|mjs|cjs|py|go|rb|php|cs|vue)$/;
+const MANIFEST = /AndroidManifest\.xml$/, GRADLE = /\.(gradle|kts)$/, NSC = /\/res\/xml\/[^/]*\.xml$/;
+const SECCTX = /token|password|passwd|secret|sign|auth|credential|otp|salt|hmac|session|verify|cert|\bkey\b/i;
+const SW = 'token|password|passwd|\\bpin\\b|otp|secret|authorization|bearer|api_?key|cookie|session_?id|cvv|card_?(?:number|no)|refresh|appcheck|fcm|jwt|credential';
+const LOGCALL = /\b(?:print|debugPrint|log|Log\.[dviwe]|Timber\.[dviwe]|println|console\.(?:log|debug|info|warn|error)|logger\.\w+|Logger\.\w+|NSLog|os_log|logging\.\w+|developer\.log)\s*\(/;
+const LOGSENS = new RegExp(`(?:\\$\\{?[\\w.!?]*(?:${SW})|\\+\\s*[\\w.!?]*(?:${SW})|,\\s*[\\w.!?]*(?:${SW})|\\(\\s*[\\w.!?]*(?:${SW}))`, 'i');
+const lineOf = (text, idx) => text.slice(0, idx).split('\n').length;
+
+const RULES = [
+  // ───────────── Network security ─────────────
+  { id: 'net-dart-bad-cert', sc: 'network', cat: 'network-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-295', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: DART, re: /badCertificateCallback/, near: 3,
+    title: 'Insecure TLS Certificate Validation',
+    refine: c => /=>\s*true|return\s+true/.test(c.near) ? {} : { sev: 'medium', kind: 'risk', conf: 'medium', title: 'Custom badCertificateCallback (verify it does not accept all certificates)' },
+    d: 'The application overrides certificate validation; if it returns true it accepts certificates without checking whether they are trusted.',
+    k: 'An attacker on the network can intercept communication between the app and the backend.',
+    i: ['Man-in-the-middle attack', 'Credential interception', 'API response manipulation', 'Sensitive information exposure'],
+    f: 'Remove the callback and rely on OS certificate validation. If pinning is needed, compare the certificate fingerprint and return true only on an exact match.' },
+  { id: 'net-jvm-trustmanager', sc: 'network', cat: 'network-security', sev: 'high', kind: 'risk', conf: 'medium', cwe: 'CWE-295', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: JVM, re: /(?:object\s*:\s*X509(?:Extended)?TrustManager|new\s+X509(?:Extended)?TrustManager|implements\s+X509(?:Extended)?TrustManager|:\s*X509TrustManager\s*\{)/, near: 25,
+    title: 'Custom X509TrustManager (verify it validates certificate chains)',
+    refine: c => /checkServerTrusted\s*\([^)]*\)\s*(?:throws[^{]*)?\{\s*(?:\/\/[^\n]*\s*)*\}/.test(c.near) ? { kind: 'vulnerability', conf: 'high', title: 'TrustManager accepts all server certificates' } : {},
+    d: 'A custom TrustManager replaces the platform certificate validation.', k: 'An empty checkServerTrusted accepts any certificate, enabling interception of TLS traffic.',
+    i: ['Man-in-the-middle attack', 'Credential interception'], f: 'Delete the custom TrustManager and use the default. Use a network security config with pin-set for pinning.' },
+  { id: 'net-jvm-hostname', sc: 'network', cat: 'network-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-297', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: JVM, re: /ALLOW_ALL_HOSTNAME_VERIFIER|hostnameVerifier\s*[({][^}\n]*->\s*true|HostnameVerifier[^;{\n]*\{[^}\n]*return\s+true|verify\s*\([^)]*\)\s*(?::\s*Boolean\s*)?(?:=|\{)\s*(?:return\s+)?true/,
+    title: 'Hostname verification disabled', d: 'Hostname verification always returns true.', k: 'Any valid certificate for any host is accepted.',
+    i: ['Man-in-the-middle attack'], f: 'Remove the custom HostnameVerifier and use the default implementation.' },
+  { id: 'net-webview-ssl-error', sc: 'network', cat: 'network-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-295', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: JVM, re: /handler\??\.proceed\(\)/, near: 6, refine: c => /onReceivedSslError/.test(c.near) ? {} : false,
+    title: 'WebView ignores SSL errors', d: 'onReceivedSslError calls handler.proceed(), continuing after certificate errors.', k: 'Pages with invalid certificates are loaded as if trusted.',
+    i: ['Man-in-the-middle attack', 'Session theft'], f: 'Call handler.cancel() and show an error instead.' },
+  { id: 'net-weak-tls', sc: 'network', cat: 'network-security', sev: 'medium', kind: 'vulnerability', conf: 'high', cwe: 'CWE-326', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: JVM, re: /SSLContext\.getInstance\(\s*"(?:SSL|SSLv3|TLSv1|TLSv1\.0|TLSv1\.1)"\s*\)/,
+    title: 'Weak TLS protocol version', d: 'Deprecated SSL/TLS protocol version requested.', k: 'Known protocol weaknesses can be exploited to decrypt traffic.',
+    i: ['Traffic decryption'], f: 'Use SSLContext.getInstance("TLSv1.3") or "TLS".' },
+  { id: 'net-http-url', sc: 'network', cat: 'network-security', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-319', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: CODE, re: /["'`](https?|wss?):\/\/(?!localhost|127\.|10\.0\.2\.2|0\.0\.0\.0|192\.168\.|\[::1\]|schemas\.|www\.w3\.org|www\.apache\.org|maven\.apache|xmlns|example\.(?:com|org)|dart\.dev|flutter\.dev)[^"'`\s]+/,
+    title: 'Hardcoded insecure endpoint (HTTP)',
+    refine: c => {
+      if (/^https:|^wss:/i.test(c.m[0].slice(1)) || /xmlns|DOCTYPE|licen[cs]e|@see|schema/i.test(c.line)) return false;
+      return /^ws:/i.test(c.m[0].slice(1)) ? { title: 'Unprotected WebSocket connection (ws://)' } : {};
+    },
+    d: 'A cleartext http:// or ws:// endpoint is hardcoded.', k: 'Data sent over cleartext connections can be read or modified in transit.',
+    i: ['Sensitive data transmitted without encryption', 'Response tampering'], f: 'Use https:// / wss:// and enforce TLS.' },
+  { id: 'net-tls-disabled', sc: 'network', cat: 'network-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-295', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: CODE, re: /rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['"]?0|verify\s*=\s*False|InsecureSkipVerify\s*:\s*true|allowInsecure\s*[:=]\s*true|CURLOPT_SSL_VERIFYPEER\s*,\s*(?:false|0)|trustAllCertificates|TrustAllCerts/i,
+    title: 'TLS certificate validation disabled', d: 'Certificate verification is explicitly disabled.', k: 'Connections can be intercepted by an attacker.',
+    i: ['Man-in-the-middle attack'], f: 'Remove the override and fix certificate trust at the source (install proper CA / pin).' },
+  { id: 'net-ios-ats-off', sc: 'ios', cat: 'network-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-319', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: /\.plist$/, ml: /NSAllowsArbitraryLoads<\/key>\s*<true\s*\/>/,
+    title: 'App Transport Security disabled (NSAllowsArbitraryLoads)', d: 'ATS is turned off globally.', k: 'The app may communicate over unencrypted HTTP.',
+    i: ['Cleartext traffic'], f: 'Remove NSAllowsArbitraryLoads; add narrow NSExceptionDomains only where unavoidable.' },
+  { id: 'net-ios-ats-exception', sc: 'ios', cat: 'network-security', sev: 'medium', kind: 'risk', conf: 'high', cwe: 'CWE-319', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: /\.plist$/, ml: /NSExceptionAllowsInsecureHTTPLoads<\/key>\s*<true\s*\/>|NSExceptionMinimumTLSVersion<\/key>\s*<string>TLSv1\.[01]/,
+    title: 'ATS exception allows insecure HTTP / old TLS', d: 'A domain exception weakens App Transport Security.', k: 'Traffic to that domain is exposed.', i: ['Cleartext traffic'], f: 'Serve the domain over TLS 1.2+ and remove the exception.' },
+  { id: 'net-ios-trust-challenge', sc: 'ios', cat: 'network-security', sev: 'medium', kind: 'risk', conf: 'low', cwe: 'CWE-295', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: SWIFT, re: /URLCredential\s*\(\s*trust:/, near: 15, refine: c => /SecTrustEvaluate/.test(c.near) ? false : {},
+    title: 'Server trust accepted without evaluation', d: 'A URLCredential is created from serverTrust without SecTrustEvaluate nearby.', k: 'Untrusted certificates may be accepted.', i: ['Man-in-the-middle attack'], f: 'Call SecTrustEvaluateWithError (or compare pinned keys) before using the credential.' },
+  { id: 'net-android-nsc-cleartext', sc: 'android', cat: 'network-security', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-319', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: NSC, ml: /cleartextTrafficPermitted\s*=\s*"true"/,
+    title: 'Network security config permits cleartext traffic', d: 'cleartextTrafficPermitted="true".', k: 'HTTP traffic is allowed.', i: ['Cleartext traffic'], f: 'Set cleartextTrafficPermitted="false"; scope any exception to specific dev domains.',
+    refine: c => { const b = c.text.slice(0, c.idx); return b.lastIndexOf('<debug-overrides') > b.lastIndexOf('</debug-overrides') ? { env: 'debug' } : {}; } },
+  { id: 'net-android-nsc-usercerts', sc: 'android', cat: 'network-security', sev: 'medium', kind: 'risk', conf: 'high', cwe: 'CWE-295', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: NSC, ml: /<certificates\s+src\s*=\s*"user"/,
+    title: 'User-installed CAs are trusted', d: 'The app trusts user-added certificate authorities.', k: 'Malicious CAs installed on the device can intercept traffic.', i: ['Man-in-the-middle attack'], f: 'Trust only system CAs in release builds; limit user CAs to <debug-overrides>.',
+    refine: c => { const b = c.text.slice(0, c.idx); return b.lastIndexOf('<debug-overrides') > b.lastIndexOf('</debug-overrides') ? { env: 'debug' } : {}; } },
+
+  // ───────────── Android manifest / gradle / code ─────────────
+  { id: 'and-debuggable', sc: 'android', cat: 'android-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-489', owasp: 'M8: Security Misconfiguration', masvs: 'MASVS-RESILIENCE-4',
+    files: MANIFEST, re: /android:debuggable\s*=\s*"true"/, title: 'android:debuggable="true"', d: 'The application is marked debuggable.', k: 'Attackers can attach a debugger and extract data or alter behaviour.', i: ['Runtime tampering', 'Data extraction'], f: 'Remove the attribute; Gradle sets it per build type.' },
+  { id: 'and-allowbackup', sc: 'android', cat: 'android-security', sev: 'medium', kind: 'risk', conf: 'high', cwe: 'CWE-921', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-1',
+    files: MANIFEST, re: /android:allowBackup\s*=\s*"true"/, title: 'android:allowBackup="true"', d: 'App data can be backed up via adb / cloud backup.', k: 'Local data (tokens, databases) may be extracted from a backup.', i: ['Data extraction'], f: 'Set allowBackup="false" or define dataExtractionRules excluding sensitive files.' },
+  { id: 'and-allowbackup-default', sc: 'android', cat: 'android-security', sev: 'low', kind: 'best-practice', conf: 'medium', cwe: 'CWE-921', owasp: 'M9: Insecure Data Storage',
+    files: MANIFEST, title: 'android:allowBackup not declared (defaults to true)', d: 'The <application> element does not set allowBackup or backup rules.', k: 'Defaults allow backup of app data.', i: ['Data extraction'], f: 'Set android:allowBackup="false" or add dataExtractionRules.',
+    check: t => { const m = t.match(/<application\b[^>]*>/); return m && !/allowBackup|dataExtractionRules|fullBackupContent/.test(m[0]) ? [{ line: lineOf(t, m.index), code: '<application …>' }] : []; } },
+  { id: 'and-cleartext', sc: 'android', cat: 'android-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-319', owasp: 'M5: Insecure Communication', masvs: 'MASVS-NETWORK-1',
+    files: MANIFEST, re: /android:usesCleartextTraffic\s*=\s*"true"/, title: 'Cleartext traffic enabled', d: 'usesCleartextTraffic="true" allows HTTP.', k: 'Data can be sniffed or modified.', i: ['Cleartext traffic'], f: 'Remove the attribute / set to false and use HTTPS.' },
+  { id: 'and-exported', sc: 'android', cat: 'android-security', sev: 'medium', kind: 'risk', conf: 'high', cwe: 'CWE-926', owasp: 'M8: Security Misconfiguration', masvs: 'MASVS-PLATFORM-1',
+    files: MANIFEST, title: 'Exported component', d: 'Component is reachable by other apps.', k: 'Other apps can start or bind it with crafted intents.', i: ['Intent spoofing', 'Unauthorized access to functionality'], f: 'Set android:exported="false" or protect it with a signature-level permission.',
+    check(t) {
+      const out = [], re = /<(activity-alias|activity|service|receiver|provider)\b([^>]*?)(\/>|>([\s\S]*?)<\/\1>)/g; let m;
+      while ((m = re.exec(t))) {
+        const a = m[2], body = m[4] || '', get = n => (a.match(new RegExp(`android:${n}\\s*=\\s*"([^"]*)"`)) || [])[1];
+        const type = m[1], name = get('name') || '?', exp = get('exported'), perm = get('permission'), hasFilter = /<intent-filter/.test(body);
+        const line = lineOf(t, m.index), code = `<${type} android:name="${name}"${exp ? ` android:exported="${exp}"` : ''}>`;
+        if (/MAIN/.test(body) && /LAUNCHER/.test(body)) continue;
+        if (get('grantUriPermissions') === 'true') out.push({ line, code, title: `Provider grants URI permissions: ${name}`, sev: 'medium', cwe: 'CWE-732' });
+        if (perm) continue;
+        if (/BROWSABLE/.test(body) && /<data/.test(body)) { out.push({ line, code, title: `Deep-link entry point: ${name}`, sev: 'info', kind: 'info', conf: 'high', d: 'Activity handles deep links from browsers/other apps.', k: 'Deep-link parameters are attacker-controlled input.', f: 'Validate every deep-link parameter before use; never trust them for authorization.', cwe: 'CWE-939' }); continue; }
+        if (exp === 'true') out.push({ line, code, title: `Exported ${type} without permission: ${name}`, sev: type === 'provider' || type === 'service' ? 'high' : 'medium' });
+        else if (exp === undefined && hasFilter) out.push({ line, code, title: `${type} has intent-filter but android:exported is not declared: ${name}`, sev: 'medium', kind: 'vulnerability', d: 'Without an explicit android:exported the component is implicitly exported (build error when targetSdk ≥ 31).' });
+      }
+      return out;
+    } },
+  { id: 'and-permission', sc: 'android', cat: 'privacy', sev: 'low', kind: 'best-practice', conf: 'medium', cwe: 'CWE-250', owasp: 'M6: Inadequate Privacy Controls', masvs: 'MASVS-PLATFORM-1',
+    files: MANIFEST, re: /uses-permission[^>]*android:name\s*=\s*"android\.permission\.(SYSTEM_ALERT_WINDOW|READ_SMS|RECEIVE_SMS|SEND_SMS|READ_CALL_LOG|WRITE_EXTERNAL_STORAGE|READ_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE|REQUEST_INSTALL_PACKAGES|QUERY_ALL_PACKAGES|ACCESS_BACKGROUND_LOCATION)"/,
+    title: 'Sensitive permission requested', refine: c => ({ title: `Sensitive permission requested: ${c.m[1]}` }),
+    d: 'The app requests a permission with high privacy/abuse impact.', k: 'Broad permissions increase the blast radius of a compromise and Play policy scrutiny.', i: ['Privacy exposure'], f: 'Remove the permission if unused, or use a narrower API (scoped storage, photo picker).' },
+  { id: 'and-release-debug-signing', sc: 'android', cat: 'android-security', sev: 'high', kind: 'risk', conf: 'medium', cwe: 'CWE-321', owasp: 'M7: Insufficient Binary Protections', masvs: 'MASVS-CODE-1',
+    files: GRADLE, re: /signingConfig\s*=?\s*signingConfigs(?:\.debug|\.getByName\(\s*"debug"\s*\)|\[\s*["']debug["']\s*\])/, near: 8, refine: c => /release/i.test(c.near) ? {} : false,
+    title: 'Release build signed with debug key', d: 'The release build type uses the debug signing config.', k: 'Debug keys are public knowledge; anyone can publish a look-alike update.', i: ['App impersonation'], f: 'Create a release keystore and reference it through untracked properties / CI secrets.' },
+  { id: 'and-minify-off', sc: 'android', cat: 'mobile-security', sev: 'low', kind: 'best-practice', conf: 'medium', cwe: 'CWE-693', owasp: 'M7: Insufficient Binary Protections', masvs: 'MASVS-RESILIENCE-3',
+    files: GRADLE, re: /(?:minifyEnabled|isMinifyEnabled)\s*=?\s*false/, near: 6, refine: c => /release/i.test(c.near) && !/debug\s*\{/.test(c.near.split('release')[0].slice(-40)) ? {} : false,
+    title: 'Code shrinking/obfuscation disabled for release', d: 'minifyEnabled is false in a release build type.', k: 'Easier reverse engineering.', i: ['Reverse engineering'], f: 'Enable R8 (minifyEnabled true) with tested keep rules.' },
+  { id: 'and-gradle-debuggable', sc: 'android', cat: 'android-security', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-489', owasp: 'M8: Security Misconfiguration',
+    files: GRADLE, re: /\b(?:isDebuggable|debuggable)\s*=?\s*true/, near: 6, refine: c => /release/i.test(c.near) ? {} : false,
+    title: 'Release build is debuggable', d: 'debuggable true inside a release build type.', k: 'A debuggable release build exposes internals.', i: ['Runtime tampering'], f: 'Remove; release builds must not be debuggable.' },
+  { id: 'and-insecure-repo', sc: 'android', cat: 'dependencies', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-494', owasp: 'M2: Inadequate Supply Chain Security',
+    files: GRADLE, re: /url\s*=?\s*(?:uri\s*\(\s*)?["']http:\/\/|allowInsecureProtocol\s*=?\s*true/, title: 'Dependency repository over plain HTTP', d: 'Gradle resolves artifacts over HTTP.', k: 'Artifacts can be replaced in transit (supply-chain attack).', i: ['Malicious dependency injection'], f: 'Use https:// repository URLs and drop allowInsecureProtocol.' },
+  { id: 'and-old-targetsdk', sc: 'android', cat: 'mobile-security', sev: 'low', kind: 'best-practice', conf: 'medium', cwe: 'CWE-1104', owasp: 'M8: Security Misconfiguration',
+    files: GRADLE, re: /targetSdk(?:Version)?\s*=?\s*(\d+)/, refine: c => +c.m[1] < 33 ? { title: `Outdated targetSdk (${c.m[1]})` } : false,
+    title: 'Outdated targetSdk', d: 'Old targetSdk disables newer platform security defaults.', k: 'Legacy behaviours (implicit exports, broad storage) stay enabled.', i: ['Weaker platform protections'], f: 'Raise targetSdk and test against new behaviour changes.' },
+  { id: 'and-webview-js', sc: 'android', cat: 'android-security', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-79', owasp: 'M4: Insufficient Input/Output Validation', masvs: 'MASVS-PLATFORM-2',
+    files: JVM, re: /javaScriptEnabled\s*=\s*true|setJavaScriptEnabled\(\s*true\s*\)/, title: 'WebView JavaScript enabled', d: 'JavaScript is enabled in a WebView.', k: 'If untrusted content is loaded, injected scripts run inside the app.', i: ['XSS in WebView', 'Data theft'], f: 'Enable only when needed and only load trusted HTTPS origins.' },
+  { id: 'and-webview-file', sc: 'android', cat: 'android-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-200', owasp: 'M4: Insufficient Input/Output Validation', masvs: 'MASVS-PLATFORM-2',
+    files: JVM, re: /allow(?:Universal|File)AccessFromFileURLs\s*=\s*true|setAllow(?:Universal|File)AccessFromFileURLs\(\s*true/, title: 'WebView file:// cross-origin access enabled', d: 'file:// pages may read other local files/origins.', k: 'A malicious local page can exfiltrate app files.', i: ['Local file theft'], f: 'Set to false (default on API 30+).' },
+  { id: 'and-webview-bridge', sc: 'android', cat: 'android-security', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-749', owasp: 'M4: Insufficient Input/Output Validation', masvs: 'MASVS-PLATFORM-2',
+    files: JVM, re: /addJavascriptInterface\s*\(/, title: 'WebView JavaScript bridge exposed', d: 'Native methods are exposed to page JavaScript.', k: 'Untrusted pages can invoke @JavascriptInterface methods.', i: ['Native API abuse'], f: 'Restrict to trusted origins, minimise exposed methods, validate all arguments.' },
+  { id: 'and-webview-debug', sc: 'android', cat: 'android-security', sev: 'medium', kind: 'risk', conf: 'high', cwe: 'CWE-489', owasp: 'M8: Security Misconfiguration',
+    files: JVM, re: /setWebContentsDebuggingEnabled\s*\(\s*true/, title: 'WebView remote debugging enabled', d: 'Chrome DevTools can inspect the WebView.', k: 'Inspection of page data and session state.', i: ['Data exposure'], f: 'Gate behind BuildConfig.DEBUG.' },
+  { id: 'and-world-mode', sc: 'android', cat: 'data-storage', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-732', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-2',
+    files: JVM, re: /MODE_WORLD_(?:READABLE|WRITEABLE)/, title: 'World-readable/writable file mode', d: 'File created with world access mode.', k: 'Other apps can read or modify the file.', i: ['Data theft'], f: 'Use MODE_PRIVATE.' },
+  { id: 'and-pendingintent', sc: 'android', cat: 'android-security', sev: 'medium', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-927', owasp: 'M8: Security Misconfiguration', masvs: 'MASVS-PLATFORM-1',
+    files: JVM, re: /PendingIntent\.get(?:Activity|Broadcast|Service|Activities|ForegroundService)\s*\(/, near: 3, refine: c => /FLAG_IMMUTABLE|FLAG_MUTABLE/.test(c.near) ? false : {},
+    title: 'PendingIntent without FLAG_IMMUTABLE/MUTABLE', d: 'Mutability flag not specified.', k: 'Another app may fill in the intent and hijack the action.', i: ['Intent redirection'], f: 'Add PendingIntent.FLAG_IMMUTABLE unless mutation is required.' },
+  { id: 'and-external-storage', sc: 'android', cat: 'data-storage', sev: 'low', kind: 'risk', conf: 'low', cwe: 'CWE-922', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-2',
+    files: JVM, re: /getExternalStorageDirectory|getExternalStoragePublicDirectory|getExternalFilesDir|getExternalCacheDir/, title: 'External storage usage', d: 'Files are written to shared/external storage.', k: 'Data may be readable by other apps or users.', i: ['Data exposure'], f: 'Store sensitive data in internal storage (filesDir) or encrypt it.' },
+  { id: 'and-biometric-nocrypto', sc: 'android', cat: 'authentication', sev: 'low', kind: 'risk', conf: 'low', cwe: 'CWE-287', owasp: 'M3: Insecure Authentication/Authorization', masvs: 'MASVS-AUTH-2',
+    files: JVM, re: /\.authenticate\s*\(\s*\w*[pP]romptInfo\s*\)/, title: 'BiometricPrompt used without CryptoObject', d: 'Biometric success is a boolean not bound to a Keystore key.', k: 'On a compromised device the result can be bypassed.', i: ['Biometric bypass'], f: 'Use BiometricPrompt.CryptoObject with a key requiring user authentication.' },
+  { id: 'and-zip-slip', sc: 'code', cat: 'input-validation', sev: 'medium', kind: 'risk', conf: 'low', cwe: 'CWE-22', owasp: 'M4: Insufficient Input/Output Validation',
+    files: JVM, title: 'Possible Zip Slip (archive entry path not validated)', d: 'Archive entry names are used to build file paths without a canonical-path check.', k: 'Crafted archives can write outside the target directory.', i: ['Arbitrary file overwrite'], f: 'Resolve canonical path and verify it starts with the destination directory.',
+    check: (t, rel, lines) => { if (!/ZipEntry|ZipInputStream/.test(t) || /canonicalPath|getCanonicalPath|\.normalize\(\)/.test(t)) return []; const i = lines.findIndex(l => /ZipEntry/.test(l)); return /File\s*\(/.test(t) && i >= 0 ? [{ line: i + 1 }] : []; } },
+  { id: 'and-intent-path', sc: 'code', cat: 'input-validation', sev: 'medium', kind: 'risk', conf: 'low', cwe: 'CWE-22', owasp: 'M4: Insufficient Input/Output Validation',
+    files: JVM, re: /File\s*\([^)]*(?:getStringExtra|getQueryParameter|getData\(\)|intent\.data)/, title: 'File path built from intent/URI input', d: 'External input is used directly in a file path.', k: 'Path traversal can reach private files.', i: ['Path traversal'], f: 'Validate against an allow-list and compare canonical paths.' },
+  { id: 'clipboard-sensitive', sc: 'code', cat: 'data-storage', sev: 'medium', kind: 'risk', conf: 'low', cwe: 'CWE-200', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-2',
+    files: /\.(kt|java|dart)$/, re: /ClipData\.newPlainText|Clipboard\.setData|setPrimaryClip|ClipboardData\s*\(/, near: 2, refine: c => /token|password|secret|otp|\bpin\b|card|cvv/i.test(c.near) ? {} : false,
+    title: 'Sensitive data copied to clipboard', d: 'Clipboard content is readable by other apps / clipboard managers.', k: 'Secrets may leak.', i: ['Information disclosure'], f: 'Avoid copying secrets; if needed, mark as sensitive (EXTRA_IS_SENSITIVE) and clear it quickly.' },
+
+  // ───────────── Flutter ─────────────
+  { id: 'fl-sharedprefs-sensitive', sc: 'flutter', cat: 'data-storage', sev: 'medium', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-312', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-1',
+    files: DART, re: /\.set(?:String|StringList)\s*\(\s*[^,)]*(?:token|password|passwd|secret|\bpin\b|otp|session|refresh|jwt|credential|api_?key)[^,)]*,/i,
+    title: 'Sensitive data stored in SharedPreferences', d: 'SharedPreferences is plain-text local storage.', k: 'Tokens/credentials can be read on rooted devices, from backups or by malware.', i: ['Token theft', 'Account takeover'], f: 'Use flutter_secure_storage (Keystore/Keychain backed).' },
+  { id: 'fl-hive-unencrypted', sc: 'flutter', cat: 'data-storage', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-312', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-1',
+    files: DART, re: /Hive\.openBox(?:Lazy)?\s*(?:<[^>]*>)?\s*\(\s*['"][^'"]*(?:token|session|auth|credential|secret|user|account|password)[^'"]*['"]/i, near: 2, refine: c => /encryptionCipher/.test(c.near) ? false : {},
+    title: 'Sensitive Hive box without encryption', d: 'Hive box appears to hold sensitive data but no encryptionCipher is set.', k: 'Plain-text local database.', i: ['Data theft'], f: 'Pass HiveAesCipher with a key kept in secure storage.' },
+  { id: 'fl-webview-js', sc: 'flutter', cat: 'flutter-security', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-79', owasp: 'M4: Insufficient Input/Output Validation', masvs: 'MASVS-PLATFORM-2',
+    files: DART, re: /javaScriptMode\s*[:=]\s*JavaScriptMode\.unrestricted|setJavaScriptMode\(\s*JavaScriptMode\.unrestricted|javascriptMode\s*:\s*JavascriptMode\.unrestricted|javaScriptEnabled\s*:\s*true/,
+    title: 'Flutter WebView allows unrestricted JavaScript', d: 'JavaScript is enabled in a WebView.', k: 'Untrusted content can run scripts in-app.', i: ['XSS in WebView'], f: 'Restrict to trusted HTTPS origins; use navigationDelegate allow-lists.' },
+  { id: 'fl-webview-file', sc: 'flutter', cat: 'flutter-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-200', owasp: 'M4: Insufficient Input/Output Validation', masvs: 'MASVS-PLATFORM-2',
+    files: DART, re: /allow(?:File|Universal)AccessFromFileURLs\s*:\s*true/, title: 'Flutter WebView file:// access enabled', d: 'File URL cross-origin access is enabled.', k: 'Local files can be exfiltrated.', i: ['Local file theft'], f: 'Set to false.' },
+  { id: 'fl-local-auth', sc: 'flutter', cat: 'authentication', sev: 'low', kind: 'risk', conf: 'low', cwe: 'CWE-287', owasp: 'M3: Insecure Authentication/Authorization', masvs: 'MASVS-AUTH-2',
+    files: DART, re: /\.authenticate\s*\(/, refine: c => /local_auth/.test(c.text) ? {} : false, oncePerFile: true,
+    title: 'Client-side biometric check', d: 'local_auth returns a boolean that is only enforced on the device.', k: 'On a compromised device the check can be skipped.', i: ['Biometric bypass'], f: 'Gate a server-validated session or a secure-storage key on the biometric result.' },
+  { id: 'fl-git-dependency', sc: 'flutter', cat: 'dependencies', sev: 'low', kind: 'best-practice', conf: 'medium', cwe: 'CWE-829', owasp: 'M2: Inadequate Supply Chain Security',
+    files: /(^|\/)pubspec\.yaml$/, re: /^\s{2,}git\s*:/, near: 4, refine: c => /ref\s*:\s*[0-9a-f]{7,40}\b/.test(c.near) ? false : {},
+    title: 'Git dependency not pinned to a commit', d: 'pubspec pulls a package from git without an immutable commit ref.', k: 'Upstream changes flow into builds unreviewed.', i: ['Supply-chain compromise'], f: 'Pin `ref:` to a full commit SHA.' },
+  { id: 'fl-http-hosted', sc: 'flutter', cat: 'dependencies', sev: 'medium', kind: 'vulnerability', conf: 'high', cwe: 'CWE-494', owasp: 'M2: Inadequate Supply Chain Security',
+    files: /(^|\/)pubspec\.yaml$/, re: /^\s+url\s*:\s*['"]?http:\/\//, title: 'Package source over plain HTTP', d: 'A hosted pub source uses http://.', k: 'Packages can be tampered with in transit.', i: ['Supply-chain compromise'], f: 'Use https://.' },
+  { id: 'cfg-bypass-flag', sc: 'flutter', cat: 'configuration', sev: 'medium', kind: 'risk', conf: 'low', cwe: 'CWE-489', owasp: 'M8: Security Misconfiguration',
+    files: CODE, re: /\b(?:skip|bypass|disable|ignore|allow)(?:Auth|Login|Ssl|Tls|Cert|Certificate|Pinning|Pin|Otp|Verification|Security|Biometric)\w*\s*[:=]\s*(?:true|false|\w+)|\b(?:is)?(?:Mock|Fake)(?:Auth|Login)\w*\s*=\s*true/,
+    title: 'Security bypass controlled by runtime configuration', d: 'A flag can disable a security control.', k: 'If it can be enabled in a production build the control is void.', i: ['Authentication/validation bypass'], f: 'Make sure the flag is compile-time debug-only (kDebugMode/BuildConfig.DEBUG) and cannot be set in release.' },
+  { id: 'cfg-debug-flag-true', sc: 'flutter', cat: 'configuration', sev: 'low', kind: 'best-practice', conf: 'low', cwe: 'CWE-489', owasp: 'M8: Security Misconfiguration',
+    files: CODE, re: /\b(?:isDebug|debugMode|enableDebug|debugEnabled|DEBUG_MODE|isDev|devMode)\s*(?:=|:)\s*true\b/, title: 'Hardcoded debug flag set to true', d: 'A debug flag is hard-coded to true.', k: 'Debug behaviour may ship to production.', i: ['Information disclosure'], f: 'Derive from build mode (kReleaseMode / BuildConfig.DEBUG).' },
+
+  // ───────────── Logging ─────────────
+  { id: 'log-sensitive', sc: 'code', cat: 'logging', sev: 'medium', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-532', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-2',
+    files: CODE, re: LOGCALL, refine: c => !LOGSENS.test(c.line) ? false : (/token|password|passwd|secret|bearer|authorization|jwt|credential|cvv|card/i.test(c.line) ? { sev: 'high' } : {}),
+    title: 'Sensitive data written to log', d: 'A log statement includes a value that looks like a credential, token or personal data.', k: 'Logs are readable via adb/Console, crash reporters and remote log sinks.',
+    i: ['Authentication tokens visible in device logs', 'Account takeover via leaked session'], f: 'Do not log secrets; log only non-sensitive identifiers, and strip logging in release builds.' },
+  { id: 'log-http-body', sc: 'code', cat: 'logging', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-532', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-2',
+    files: CODE, re: /HttpLoggingInterceptor\.Level\.BODY|setLevel\(\s*(?:HttpLoggingInterceptor\.)?Level\.BODY|LogInterceptor\s*\([^)]*(?:request|response)(?:Body|Header)\s*:\s*true|PrettyDioLogger/,
+    title: 'HTTP traffic logging may leak tokens', d: 'Full request/response logging is configured.', k: 'Authorization headers and bodies reach the log.', i: ['Token leakage'], f: 'Enable only in debug builds and redact Authorization/Cookie headers.' },
+
+  // ───────────── Cryptography ─────────────
+  { id: 'crypto-weak-hash', sc: 'code', cat: 'cryptography', sev: 'medium', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-328', owasp: 'M10: Insufficient Cryptography', masvs: 'MASVS-CRYPTO-1',
+    files: CODE, re: /MessageDigest\.getInstance\(\s*"(MD5|MD2|SHA-?1)"|\b(md5|sha1)\.convert\s*\(|Hashing\.(md5|sha1)\(|createHash\(\s*['"](md5|sha1)['"]|hashlib\.(md5|sha1)\(|\bCC_(MD5|SHA1)\b/i, near: 1,
+    refine: c => SECCTX.test(c.near) ? { title: `Weak hash algorithm (${(c.m[1] || c.m[2] || c.m[3] || c.m[4] || c.m[5] || c.m[6] || 'MD5/SHA-1').toUpperCase()}) in security context` } : false,
+    title: 'Weak hash algorithm', d: 'MD5/SHA-1 used near security-sensitive code (checksum-only usage is ignored).', k: 'Collision/pre-image attacks make the hash unsuitable for auth, signatures or password storage.', i: ['Forged signatures', 'Password cracking'], f: 'Use SHA-256+ (HMAC for integrity) and Argon2/bcrypt/PBKDF2 for passwords.' },
+  { id: 'crypto-weak-cipher', sc: 'code', cat: 'cryptography', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-327', owasp: 'M10: Insufficient Cryptography', masvs: 'MASVS-CRYPTO-1',
+    files: CODE, re: /Cipher\.getInstance\(\s*"(?:DES(?:ede)?(?:\/[^"]*)?|RC[24](?:\/[^"]*)?|AES|AES\/ECB\/[^"]*|Blowfish)"\s*\)|AESMode\.ecb|createCipher(?:iv)?\(\s*['"](?:des|rc4|aes-\d+-ecb)/i,
+    title: 'Weak cipher or ECB mode', d: 'DES/RC4/ECB (or bare "AES" which defaults to ECB) is used.', k: 'Patterns in plaintext leak and ciphertext can be manipulated.', i: ['Data disclosure'], f: 'Use AES/GCM/NoPadding with a random 96-bit IV per message.' },
+  { id: 'crypto-hardcoded-key', sc: 'code', cat: 'cryptography', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-321', owasp: 'M10: Insufficient Cryptography', masvs: 'MASVS-CRYPTO-2',
+    files: CODE, re: /SecretKeySpec\s*\(\s*"[^"]+"|\bKey\.from(?:Utf8|Base64|Base16)\s*\(\s*['"][^'"]+['"]/,
+    title: 'Hardcoded encryption key', d: 'A symmetric key is embedded in code.', k: 'Anyone with the app binary can extract the key and decrypt data.', i: ['Decryption of protected data'], f: 'Generate keys at runtime and keep them in Android Keystore / iOS Keychain.' },
+  { id: 'crypto-hardcoded-iv', sc: 'code', cat: 'cryptography', sev: 'medium', kind: 'vulnerability', conf: 'high', cwe: 'CWE-329', owasp: 'M10: Insufficient Cryptography', masvs: 'MASVS-CRYPTO-1',
+    files: CODE, re: /IvParameterSpec\s*\(\s*"[^"]+"|\bIV\.from(?:Utf8|Base64|Base16)\s*\(\s*['"][^'"]+['"]/,
+    title: 'Hardcoded / static IV', d: 'A fixed IV is reused.', k: 'IV reuse breaks semantic security (and GCM confidentiality entirely).', i: ['Ciphertext analysis'], f: 'Generate a random IV per encryption and store it with the ciphertext.' },
+  { id: 'crypto-weak-random', sc: 'code', cat: 'cryptography', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-338', owasp: 'M10: Insufficient Cryptography', masvs: 'MASVS-CRYPTO-1',
+    files: CODE, re: /\bnew\s+Random\s*\(|(?<![.\w])Random\s*\(\s*\d*\s*\)|\bMath\.random\s*\(|\brandom\.(?:randint|random|choice)\s*\(/, near: 4,
+    refine: c => /token|password|otp|nonce|session|secret|\bkey\b|salt|\bpin\b|\bcode\b|uuid/i.test(c.near) ? {} : false,
+    title: 'Non-cryptographic random generator for security value', d: 'A predictable PRNG is used near security-sensitive data.', k: 'Tokens/OTPs become guessable.', i: ['Token prediction'], f: 'Use SecureRandom / Random.secure() / crypto.randomBytes.' },
+
+  // ───────────── Storage (iOS) ─────────────
+  { id: 'ios-keychain-always', sc: 'ios', cat: 'ios-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-311', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-1',
+    files: SWIFT, re: /kSecAttrAccessibleAlways(?:ThisDeviceOnly)?\b/, title: 'Keychain item accessible when device is locked', d: 'kSecAttrAccessibleAlways is deprecated and unsafe.', k: 'Data readable on a locked device.', i: ['Data theft'], f: 'Use kSecAttrAccessibleWhenUnlockedThisDeviceOnly (or AfterFirstUnlock if background needed).' },
+  { id: 'ios-userdefaults-sensitive', sc: 'ios', cat: 'ios-security', sev: 'medium', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-312', owasp: 'M9: Insecure Data Storage', masvs: 'MASVS-STORAGE-1',
+    files: SWIFT, re: /UserDefaults[^\n]*\.set\([^\n]*(?:token|password|secret|\bpin\b|session|credential)/i, title: 'Sensitive data in UserDefaults', d: 'UserDefaults is unencrypted.', k: 'Readable from backups / jailbroken devices.', i: ['Token theft'], f: 'Store in the Keychain.' },
+
+  // ───────────── Injection / input validation ─────────────
+  { id: 'inj-sql', sc: 'code', cat: 'injection', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-89', owasp: 'A03:2021 Injection', masvs: 'MASVS-CODE-4',
+    files: CODE, re: /\b(?:SELECT|INSERT INTO|UPDATE|DELETE FROM)\b[^;\n]*(?:["'`]\s*\+|\$\{?[A-Za-z_]|%s|\{[A-Za-z_]+\}|\+\s*[A-Za-z_])/i,
+    refine: c => /query|execute|exec|raw|prepare|execSQL|cursor|\bdb\b|statement/i.test(c.line) ? {} : false,
+    title: 'Possible SQL injection (string-built query)', d: 'SQL is assembled with string concatenation/interpolation.', k: 'Attacker-controlled input can change the query.', i: ['Data disclosure', 'Data manipulation'], f: 'Use parameterized queries (whereArgs / ? placeholders / prepared statements).' },
+  { id: 'inj-command', sc: 'code', cat: 'injection', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-78', owasp: 'A03:2021 Injection',
+    files: CODE, re: /Runtime\.getRuntime\(\)\.exec\s*\(\s*[^")\s]|\bProcess\.(?:run|start)\s*\([^)]*\$\{?\w|\b(?:exec|execSync)\s*\(\s*(?:`[^`]*\$\{|["'][^"']*["']\s*\+)|subprocess\.\w+\([^)]*shell\s*=\s*True|\bos\.system\s*\(/,
+    title: 'Possible OS command injection', d: 'A shell command is built from non-constant input.', k: 'Attacker-controlled input can execute arbitrary commands.', i: ['Remote/local code execution'], f: 'Pass arguments as an array without a shell and validate against an allow-list.' },
+  { id: 'inj-eval', sc: 'code', cat: 'injection', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-95', owasp: 'A03:2021 Injection',
+    files: /\.(js|jsx|ts|tsx|mjs|cjs|py)$/, re: /(?<![.\w])eval\s*\(|new Function\s*\(|\bpickle\.loads?\s*\(|\byaml\.load\s*\(/, refine: c => /yaml\.load/.test(c.line) && /Loader/.test(c.line) ? false : {},
+    title: 'Dynamic code evaluation / unsafe deserialization', d: 'eval/Function/pickle/yaml.load on data.', k: 'Crafted input executes code.', i: ['Code execution'], f: 'Parse data with JSON / safe loaders; never eval.' },
+  { id: 'xss-html', sc: 'code', cat: 'input-validation', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-79', owasp: 'A03:2021 Injection',
+    files: JS, re: /\.innerHTML\s*=|dangerouslySetInnerHTML|document\.write\s*\(|\bv-html\b/, title: 'Unsafe HTML injection sink', d: 'Raw HTML is written to the DOM.', k: 'Unescaped input becomes script (XSS).', i: ['Session theft', 'Defacement'], f: 'Use textContent / framework escaping or sanitize with DOMPurify.' },
+
+  // ───────────── Authentication / API ─────────────
+  { id: 'auth-jwt-verify-off', sc: 'code', cat: 'authentication', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-347', owasp: 'A07:2021 Identification and Authentication Failures',
+    files: CODE, re: /alg["']?\s*[:=]\s*["']none["']|algorithms?\s*[:=]\s*\[\s*["']none["']|ignoreExpiration\s*:\s*true|verify_signature["']?\s*[:=]\s*False/i, title: 'JWT verification weakened', d: 'JWT signature or expiry validation is disabled.', k: 'Forged or expired tokens are accepted.', i: ['Authentication bypass'], f: 'Always verify signature with a fixed algorithm list and enforce expiry.' },
+  { id: 'auth-jwt-client-decode', sc: 'code', cat: 'authentication', sev: 'low', kind: 'risk', conf: 'low', cwe: 'CWE-345', owasp: 'M3: Insecure Authentication/Authorization',
+    files: CODE, re: /\b(?:JwtDecoder\.decode|jwtDecode|JWT\.decode|decodeJwt|jwt_decode|JWTDecode)\b/, oncePerFile: true,
+    title: 'JWT decoded on the client without verification', d: 'Claims are read client-side.', k: 'Claims (role, expiry) must not be trusted for authorization decisions on the client.', i: ['Client-side auth bypass'], f: 'Use claims only for UX; enforce authorization on the server.' },
+  { id: 'api-token-in-url', sc: 'code', cat: 'api-security', sev: 'medium', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-598', owasp: 'M5: Insecure Communication',
+    files: CODE, re: /["'`][^"'`]*[?&](?:token|access_token|api_?key|password|passwd|secret|session|sid|auth)=(?:\$\{?\w|["'`]\s*\+|[A-Za-z0-9]{8,})/i,
+    title: 'Sensitive value in URL query string', d: 'Credentials/tokens are sent as query parameters.', k: 'URLs end up in server logs, proxies, history and referrers.', i: ['Token leakage'], f: 'Send secrets in the Authorization header or POST body.' },
+  { id: 'auth-client-authz', sc: 'code', cat: 'authorization', sev: 'low', kind: 'risk', conf: 'low', cwe: 'CWE-602', owasp: 'M3: Insecure Authentication/Authorization',
+    files: /\.(dart|kt|java|jsx|tsx|vue|swift)$/, re: /\b(?:isAdmin|is_admin|hasRole|hasPermission)\b|role\s*[!=]=+\s*['"](?:admin|manager|owner|superuser)['"]/, oncePerFile: true,
+    title: 'Authorization decision made in client code', d: 'UI logic gates an action by role/permission.', k: 'If the backend does not enforce the same rule, hiding a button does not protect the endpoint.', i: ['Privilege escalation via direct API calls'], f: 'Verify the backend authorizes this action independently of the UI.' },
+  { id: 'auth-weak-password-policy', sc: 'code', cat: 'authentication', sev: 'low', kind: 'best-practice', conf: 'medium', cwe: 'CWE-521', owasp: 'A07:2021 Identification and Authentication Failures',
+    files: CODE, re: /(?:password|passwd|pwd)[\w.]*\.length\s*(?:>=?|<=?|==)\s*[1-5]\b|minPasswordLength\s*[:=]\s*[1-5]\b/i, title: 'Weak password length requirement', d: 'Minimum password length is very short.', k: 'Easy brute force.', i: ['Account takeover'], f: 'Require ≥ 8–12 characters and check against breached lists.' },
+  { id: 'auth-hardcoded-login', sc: 'code', cat: 'authentication', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-798', owasp: 'A07:2021 Identification and Authentication Failures', masvs: 'MASVS-AUTH-1',
+    files: CODE, re: /(?:==|equals\()\s*\(?["'](?:admin|password|123456|12345678|letmein|root)["']/i, near: 2, refine: c => /password|passwd|pwd|login|auth/i.test(c.near) ? {} : false,
+    title: 'Hardcoded credentials in authentication logic', d: 'Authentication compares against a fixed credential.', k: 'Anyone can log in with the known value.', i: ['Authentication bypass'], f: 'Authenticate against the backend; remove fixed credentials.' },
+  { id: 'api-cors-wildcard', sc: 'code', cat: 'api-security', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-942', owasp: 'A05:2021 Security Misconfiguration',
+    files: /\.(js|ts|mjs|cjs|py)$/, re: /Access-Control-Allow-Origin["']?\s*[:,]\s*["']\*["']|cors\s*\(\s*\{[^}]*origin\s*:\s*(?:true|["']\*["'])|allow_origins\s*=\s*\[\s*["']\*["']|allow_all_origins\s*=\s*True/i,
+    title: 'CORS allows any origin', d: 'Wildcard CORS policy.', k: 'Any website can call the API from a victim browser (dangerous with credentials).', i: ['Cross-origin data theft'], f: 'Allow-list the specific origins.' },
+  { id: 'cfg-debug-backend', sc: 'code', cat: 'configuration', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-489', owasp: 'A05:2021 Security Misconfiguration',
+    files: PY, re: /^\s*DEBUG\s*=\s*True\b/, title: 'Debug mode enabled', d: 'DEBUG = True.', k: 'Verbose errors and debugger leak internals.', i: ['Information disclosure'], f: 'Read from environment; default to False.' },
+
+  // ───────────── Configuration ─────────────
+  { id: 'cfg-rules-open', sc: 'config', cat: 'database-security', sev: 'critical', kind: 'vulnerability', conf: 'high', cwe: 'CWE-862', owasp: 'A01:2021 Broken Access Control',
+    files: /\.rules$/, re: /allow\s+[^:\n]*:\s*if\s+true\s*;/, title: 'Firebase rules allow unauthenticated access', d: '`allow … if true` grants everyone access.', k: 'Anyone with the project id can read/write data.', i: ['Data breach', 'Data tampering'], f: 'Require request.auth and ownership checks (resource.data.uid == request.auth.uid).' },
+  { id: 'cfg-rules-testmode', sc: 'config', cat: 'database-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-862', owasp: 'A01:2021 Broken Access Control',
+    files: /\.rules$/, re: /request\.time\s*<\s*timestamp\.date\(/, title: 'Time-limited open Firebase rules (test mode)', d: 'Test-mode rules allow everything until a date.', k: 'Open access until expiry, then app breaks.', i: ['Data breach'], f: 'Replace with real authorization rules.' },
+  { id: 'cfg-rules-authed-any', sc: 'config', cat: 'authorization', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-285', owasp: 'A01:2021 Broken Access Control',
+    files: /\.rules$/, re: /allow\s+[^:\n]*:\s*if\s+request\.auth\s*!=\s*null\s*;/, title: 'Any signed-in user allowed (no ownership check)', d: 'Rule only checks that a user is logged in.', k: 'Any user can read/write other users\' data.', i: ['Horizontal privilege escalation'], f: 'Add ownership/role checks on the document or path.' },
+  { id: 'cfg-firebase-client-config', sc: 'config', cat: 'configuration', sev: 'info', kind: 'info', conf: 'high', cwe: 'CWE-200', owasp: 'M1: Improper Credential Usage',
+    files: /(^|\/)(google-services\.json|GoogleService-Info\.plist)$/, check: () => [{ line: 1 }], title: 'Firebase client configuration committed', d: 'Firebase client config contains public identifiers/API keys.', k: 'Safe by design only if keys are restricted and Security Rules/App Check are enforced.', i: ['Abuse of unrestricted API keys'], f: 'Restrict API keys in Google Cloud Console; enable App Check.' },
+  { id: 'docker-secret-env', sc: 'config', cat: 'ci-cd-security', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-798', owasp: 'A05:2021 Security Misconfiguration',
+    files: /(^|\/)Dockerfile[^/]*$/, re: /^\s*ENV\s+\w*(?:PASSWORD|SECRET|TOKEN|KEY)\w*[= ]\s*[^$\s]+/i, title: 'Secret baked into Docker image via ENV', d: 'ENV values persist in image layers.', k: 'Anyone with the image can read it.', i: ['Credential exposure'], f: 'Inject at runtime (secrets / env at run) not at build.' },
+  { id: 'docker-curl-pipe', sc: 'config', cat: 'ci-cd-security', sev: 'medium', kind: 'risk', conf: 'medium', cwe: 'CWE-494', owasp: 'A08:2021 Software and Data Integrity Failures',
+    files: /(^|\/)Dockerfile[^/]*$|\.ya?ml$|\.sh$/, re: /(?:curl|wget)[^|\n]*\|\s*(?:sudo\s+)?(?:ba)?sh\b|^\s*ADD\s+https?:/, title: 'Remote script piped to shell / ADD from URL', d: 'Unverified remote code is executed.', k: 'A compromised host runs code in your build.', i: ['Supply-chain compromise'], f: 'Download, verify checksum/signature, then run.' },
+  { id: 'docker-root', sc: 'config', cat: 'ci-cd-security', sev: 'low', kind: 'best-practice', conf: 'medium', cwe: 'CWE-250', owasp: 'A05:2021 Security Misconfiguration',
+    files: /(^|\/)Dockerfile[^/]*$/, title: 'Container runs as root', d: 'No USER instruction.', k: 'Container breakout has root privileges.', i: ['Privilege escalation'], f: 'Add a non-root USER.',
+    check: (t, rel, lines) => /^\s*USER\s+(?!root)/m.test(t) ? [] : [{ line: Math.max(1, lines.findIndex(l => /^\s*FROM\b/i.test(l)) + 1) }] },
+  { id: 'ci-pr-target', sc: 'config', cat: 'ci-cd-security', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-94', owasp: 'A08:2021 Software and Data Integrity Failures',
+    files: /^\.github\/workflows\/.*\.ya?ml$/, title: 'pull_request_target checks out untrusted PR code', d: 'Privileged workflow runs code from the PR head.', k: 'A fork PR can exfiltrate secrets.', i: ['Secret theft', 'Repository takeover'], f: 'Do not check out PR head in pull_request_target, or run untrusted code unprivileged.',
+    check: (t, rel, lines) => /pull_request_target/.test(t) && /ref\s*:\s*\$\{\{\s*github\.event\.pull_request\.head/.test(t) ? [{ line: lines.findIndex(l => /pull_request_target/.test(l)) + 1 }] : [] },
+  { id: 'ci-script-injection', sc: 'config', cat: 'ci-cd-security', sev: 'high', kind: 'vulnerability', conf: 'medium', cwe: 'CWE-78', owasp: 'A03:2021 Injection',
+    files: /^\.github\/workflows\/.*\.ya?ml$/, re: /\$\{\{\s*github\.event\.(?:issue|pull_request|comment|review|head_commit|commits)[^}]*(?:title|body|message|name|ref|label|email)[^}]*\}\}/, near: 0,
+    refine: c => /^\s*(?:-\s*)?(?:run:|\w+:)?\s*.*\$\{\{/.test(c.line) && !/^\s*(?:ref|repository|name|if):/.test(c.line) ? {} : false,
+    title: 'Script injection via untrusted GitHub context', d: 'Attacker-controlled text is expanded into a shell script.', k: 'A crafted PR title can run commands in CI.', i: ['CI compromise'], f: 'Pass via env: and reference "$VAR" in the script.' },
+  { id: 'ci-secret-echo', sc: 'config', cat: 'ci-cd-security', sev: 'high', kind: 'vulnerability', conf: 'high', cwe: 'CWE-532', owasp: 'A09:2021 Security Logging and Monitoring Failures',
+    files: /^\.github\/workflows\/.*\.ya?ml$|\.gitlab-ci\.yml$/, re: /echo\s+.*\$\{\{\s*secrets\./, title: 'Secret echoed in CI script', d: 'Secrets are printed to logs.', k: 'Log readers obtain the secret.', i: ['Credential exposure'], f: 'Never echo secrets.' },
+  { id: 'ci-perms', sc: 'config', cat: 'ci-cd-security', sev: 'medium', kind: 'best-practice', conf: 'high', cwe: 'CWE-250', owasp: 'A05:2021 Security Misconfiguration',
+    files: /^\.github\/workflows\/.*\.ya?ml$/, re: /permissions:\s*write-all/, title: 'Workflow has write-all permissions', d: 'GITHUB_TOKEN has full write access.', k: 'Compromised step can modify the repo.', i: ['Repository tampering'], f: 'Grant least-privilege permissions per job.' },
+  { id: 'ci-unpinned-action', sc: 'config', cat: 'ci-cd-security', sev: 'low', kind: 'best-practice', conf: 'high', cwe: 'CWE-829', owasp: 'A08:2021 Software and Data Integrity Failures',
+    files: /^\.github\/workflows\/.*\.ya?ml$/, re: /uses:\s*[\w.\/-]+@(?:master|main|latest)\b/, title: 'GitHub Action pinned to a moving branch', d: 'Action tracks a branch.', k: 'Upstream change runs in your pipeline.', i: ['Supply-chain compromise'], f: 'Pin to a release tag or commit SHA.' },
+];
+
+module.exports = { RULES, lineOf };

@@ -1,0 +1,11 @@
+{
+  "name": "security-center",
+  "version": "0.1.0",
+  "description": "AI-assisted Security Review Agent: scan, explain, fix, verify, rescan. Android/Kotlin/Flutter/iOS/Node.",
+  "bin": { "secscan": "bin/secscan.js" },
+  "scripts": { "test": "node test/selftest.js", "serve": "node bin/secscan.js serve" },
+  "engines": { "node": ">=18" },
+  "author": "Moazzam Saleem",
+  "license": "UNLICENSED",
+  "private": true
+}

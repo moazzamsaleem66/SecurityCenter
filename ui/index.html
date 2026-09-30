@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Swiftec Security Center</title>
+<link rel="icon" type="image/png" href="/assets/logo-64.png">
+<link rel="apple-touch-icon" href="/assets/logo-180.png">
+<style>:root{color-scheme:light dark;--bg:#fff;--card:#fff;--fg:#1E2A3C;--mut:#616E82;--bd:#E5E7EB;--pri:#3188FF;--pri-soft:#E9F0FF;--crit:#ff3b30;--high:#ff9500;--med:#d99a00;--low:#3188FF;--info:#8e8e93;--ok:#1f9d55;--ok-soft:#E7F7EF;--code:#F3F4F6;--glass:rgba(255,255,255,.82);--shadow:0 1px 2px rgba(16,24,40,.04),0 10px 30px rgba(49,136,255,.10);--ease:cubic-bezier(.32,.72,0,1)}
+@media(prefers-color-scheme:dark){:root{--bg:#0b0f17;--card:#141a26;--fg:#f2f5fa;--mut:#9aa6b8;--bd:#263042;--pri:#3188FF;--pri-soft:#16294a;--crit:#ff6b60;--high:#ff9f0a;--med:#ffd60a;--low:#6aa9ff;--info:#8e8e93;--ok:#34c77b;--ok-soft:#10301f;--code:rgba(120,140,170,.16);--glass:rgba(20,26,38,.78);--shadow:0 10px 30px rgba(0,0,0,.5)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14.5px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .4s}
+body{background:linear-gradient(135deg,#C9DEFF 0%,#E6F0FF 35%,#D5E6FF 70%,#EEF5FF 100%) fixed;min-height:100vh}
+@media(prefers-color-scheme:dark){body{background:linear-gradient(135deg,#0d1b33,#0b0f17 60%,#10203b) fixed}}
+h1,h2{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif;letter-spacing:-.022em}
+.wrap{max-width:1760px;margin:0 auto;padding:22px clamp(16px,3vw,48px) 60px}
+.top{position:sticky;top:0;z-index:4;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(22px);backdrop-filter:saturate(180%) blur(22px);border-bottom:1px solid var(--bd)}
+.top>div{max-width:1760px;margin:0 auto;padding:10px clamp(16px,3vw,48px);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.logo{width:30px;height:30px;border-radius:8px;vertical-align:middle;margin-right:10px;box-shadow:0 1px 4px rgba(49,136,255,.35)}
+.tagline{letter-spacing:.14em;text-transform:uppercase;font-size:12px;font-weight:600;color:var(--pri)}
+.brand{display:flex;align-items:center;cursor:pointer;font-weight:600;font-size:17px;letter-spacing:-.01em;margin-right:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:22px 26px;box-shadow:var(--shadow)}
+h3{margin:18px 0 8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sp{flex:1}.mut{color:var(--mut)}.mono,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px}
+button{font:inherit;font-weight:500;border:0;background:var(--code);color:var(--fg);padding:7px 16px;border-radius:980px;cursor:pointer;transition:transform .1s ease-out,filter .2s,background .2s}
+button:hover{filter:brightness(.96)}button:active{transform:scale(.97)}
+button.pri{background:var(--pri);color:#fff}button.pri:hover{filter:brightness(1.06)}button:disabled{opacity:.45;cursor:not-allowed;transform:none}button.sm{padding:4px 12px;font-size:13px}
+a{color:var(--pri);text-decoration:none}a:hover{text-decoration:underline}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:7px 11px;outline:0;transition:box-shadow .2s,border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 25%,transparent)}textarea{width:100%}
+input[type=checkbox],input[type=radio]{accent-color:var(--pri)}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11.5px;font-weight:600;letter-spacing:.01em;background:color-mix(in srgb,currentColor 14%,transparent)}
+.critical{color:var(--crit)}.high{color:var(--high)}.medium{color:var(--med)}.low{color:var(--low)}.info{color:var(--info)}
+.hero{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center}
+@media(max-width:780px){.hero{grid-template-columns:1fr}}
+.hero h1{font-size:34px;line-height:1.1;font-weight:700;margin:0 0 10px}
+.chipb{display:inline-block;background:var(--code);border-radius:99px;padding:2px 12px;font-size:12.5px}
+.legend .lg{display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:12px;cursor:pointer;transition:background .2s;min-width:260px;font-variant-numeric:tabular-nums}
+.legend .lg:hover{background:var(--code)}.legend .lg.on{background:color-mix(in srgb,currentColor 12%,transparent)}.legend .lg:active{transform:scale(.985)}
+.dot{width:10px;height:10px;border-radius:50%;background:currentColor;flex:none;display:inline-block}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.tile{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:22px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:transform .3s var(--ease),box-shadow .3s var(--ease);min-height:150px;display:flex;flex-direction:column}
+.tile:hover{transform:translateY(-2px);box-shadow:var(--shadow)}.tile:active{transform:scale(.985)}
+.tile .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;color:#fff;margin-bottom:14px}
+.tile b{font-size:17px;letter-spacing:-.01em}.tile .n{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:auto}
+.home-h{font-size:40px;font-weight:700;letter-spacing:-.03em;margin:8px 0 4px}
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 14px;margin:10px 0}.bar{height:6px;background:var(--code);border-radius:5px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri);border-radius:5px;transition:width .4s var(--ease)}
+.tabs{display:flex;align-items:center;gap:10px;margin:26px 0 14px;flex-wrap:wrap}
+.seg{display:inline-flex;background:rgba(255,255,255,.55);border:1px solid var(--bd);border-radius:11px;padding:3px}.seg div{padding:6px 16px;border-radius:9px;cursor:pointer;color:var(--mut);font-weight:500;transition:background .25s var(--ease),color .2s,box-shadow .25s}
+.seg div.on{background:var(--card);color:var(--pri);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.lnk{font-size:13px;margin-left:12px}
+.grp{margin:22px 4px 8px;font-weight:600;font-size:13px;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(520px,100%),1fr));gap:10px}.grid .f{margin:0}
+.f{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px 18px;margin:8px 0;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
+.f:hover{transform:translateY(-1px);box-shadow:var(--shadow)}.f:active{transform:scale(.995)}
+.f .t{font-weight:600;letter-spacing:-.005em}.f small{color:var(--mut)}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--bd);font-size:13px}th{color:var(--mut);font-weight:600;font-size:12px}tr:last-child td{border-bottom:0}
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .35s;z-index:5}#scrim.on{opacity:1;pointer-events:auto}
+#drawer{position:fixed;top:12px;right:12px;bottom:12px;width:min(650px,calc(100vw - 24px));background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(28px);backdrop-filter:saturate(180%) blur(28px);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:auto;padding:22px 26px;z-index:6;transform:translateX(calc(100% + 30px));visibility:hidden;transition:transform .45s var(--ease),visibility 0s .45s}
+#drawer.open{transform:none;visibility:visible;transition:transform .45s var(--ease),visibility 0s}
+pre{background:var(--code);padding:10px 12px;border-radius:12px;overflow:auto;margin:6px 0;white-space:pre-wrap;word-break:break-all}
+.ctx{background:var(--code);border-radius:12px}.ctx div{white-space:pre;padding:0 10px}.ctx .hit{background:color-mix(in srgb,var(--high) 22%,transparent)}.ctx span{color:var(--mut);display:inline-block;width:38px}
+.card.ctx{box-shadow:none}
+.diff{background:var(--code);border-radius:12px;box-shadow:none}.diff .add{background:color-mix(in srgb,var(--ok) 22%,transparent)}.diff .del{background:color-mix(in srgb,var(--crit) 20%,transparent)}.diff div{white-space:pre-wrap;word-break:break-all}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 12px}.kv div:nth-child(odd){color:var(--mut)}
+.chat .m{margin:6px 0;padding:10px 14px;border-radius:16px;background:var(--code);white-space:pre-wrap}.chat .m.dev{background:var(--pri-soft)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.3);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:none;place-items:center;z-index:9}
+#modal>div{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:22px;width:min(460px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:pop .35s var(--ease)}
+@keyframes pop{from{transform:scale(.94);opacity:0}}
+.fld{margin:10px 0}.fld label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}.fld input{width:100%}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(40,40,42,.92);color:#fff;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:10px 20px;border-radius:99px;display:none;z-index:20;max-width:80vw;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.warn{background:var(--pri-soft);border:1px solid color-mix(in srgb,var(--pri) 25%,transparent);padding:10px 14px;border-radius:12px;margin-top:10px;font-size:13px}
+.foot,footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--bd);color:var(--mut);font-size:12.5px;text-align:center}
+.pill.ok{background:var(--ok-soft)}.ok{color:var(--ok)}.bad{color:var(--crit)}
+.chips{display:flex;gap:10px;flex-wrap:wrap}.chip{border-radius:14px;padding:10px 16px;min-width:92px;text-align:center;background:var(--code)}.chip b{display:block;font-size:24px;letter-spacing:-.02em}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation:none!important}#drawer{transition:opacity .2s!important}}
+@media(prefers-reduced-transparency:reduce){.top,#drawer,#modal,#toast{-webkit-backdrop-filter:none;backdrop-filter:none}.top,#drawer{background:var(--card)}}
+</style>
+</head>
+<body>
+<div class="top"><div>
+  <span class="brand" id="brand" title="Home"><img class="logo" src="/assets/logo-128.png" alt="">Swiftec Security Center</span>
+  <button class="pri" id="bScan">New Scan</button>
+  <button id="bRescan">Rescan</button>
+  <button id="bChanged">Changed Files</button>
+  <button id="bHistory">History</button>
+</div></div>
+<div class="wrap">
+  <div class="card" id="heroCard">
+    <div class="hero">
+      <div>
+        <div class="mut" style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Project</div>
+        <h1 id="proj"></h1>
+        <div class="row" style="gap:8px"><span class="chipb mono" id="branch"></span><span id="state" class="pill"></span></div>
+        <div class="mut mono" id="rootPath" style="font-size:11.5px;margin-top:10px;word-break:break-all"></div>
+        <div class="mut" style="margin-top:2px">Last scan: <span id="last"></span></div>
+      </div>
+      <div id="donut"></div>
+    </div>
+    <div id="prog" style="display:none;margin-top:20px">
+      <b>Security Scan</b> <span class="mut" id="progCur"></span>
+      <div class="steps" id="steps"></div>
+      <div class="bar"><i id="barI" style="width:0"></i></div>
+      <div class="mut" style="margin-top:4px">Progress: <span id="pct">0</span>%</div>
+    </div>
+    <div id="warns"></div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="view"></div>
+  <footer id="foot"></footer>
+</div>
+
+<div id="scrim"></div>
+<div id="drawer"></div>
+<div id="modal"><div id="modalBody"></div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const T = '__TOKEN__';
+const SEV = ['critical', 'high', 'medium', 'low', 'info'];
+const VAR = { critical: 'crit', medium: 'med' };
+const SEVN = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', info: 'Informational' };
+const STATUS = { open: 'Open', reviewing: 'Reviewing', ai_fix_proposed: 'AI Fix Proposed', fix_applied: 'Fix Applied', manual_fix_applied: 'Manual Fix Applied', rescan_required: 'Rescan Required', resolved: 'Resolved', false_positive: 'False Positive', accepted_risk: 'Accepted Risk', ignored: 'Ignored' };
+const KIND = { vulnerability: 'Security Vulnerability', risk: 'Security Risk', 'best-practice': 'Best Practice Warning', quality: 'Code Quality Issue', info: 'Informational Recommendation' };
+const ACTIVE = ['open', 'reviewing', 'ai_fix_proposed', 'fix_applied', 'manual_fix_applied', 'rescan_required'];
+const UNSUPPORTED = ['external', 'ai', 'history'];
+
+const _rc = Element.prototype.replaceChildren; Element.prototype.replaceChildren = function (...c) { return _rc.apply(this, c.flat().filter(x => x != null && x !== false)); };
+const h = (t, a, ...c) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a || {})) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v); } for (const x of c.flat()) { if (x == null || x === false) continue; e.append(x.nodeType ? x : document.createTextNode(String(x))); } return e; };
+const $ = id => document.getElementById(id);
+const api = (p, body) => fetch('/api/' + p, { method: body ? 'POST' : 'GET', headers: { 'x-secscan-token': T, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; });
+const toast = (m, bad) => { const t = $('toast'); t.textContent = m; t.style.background = bad ? 'rgba(200,30,30,.94)' : 'rgba(40,40,42,.92)'; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4500); };
+const guard = (btn, fn) => async () => { btn.disabled = true; try { await fn(); } catch (e) { toast(e.message, true); } finally { btn.disabled = false; } };
+const pill = (s, cls) => h('span', { class: 'pill ' + (cls || s) }, s.toUpperCase ? s : s);
+const fmtDate = d => d ? new Date(d).toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'never';
+const ext = f => (f.file.match(/\.([\w]+)$/) || [, ''])[1] || '-';
+
+let S = null, F = [], scans = [], tab = 'findings', filters = { sev: '', cat: '', st: 'active', scanner: '', lang: '', q: '', view: 'all' }, poll = null, openId = null;
+
+async function load() {
+  [S, F, scans] = await Promise.all([api('state'), api('findings'), api('scans')]);
+  if (!load.once) tab = 'home'; load.once = true;
+  renderHead(); renderView();
+  if (S.state === 'Scanning' && !poll) startPoll();
+}
+
+function renderHead() {
+  $('proj').textContent = S.project; document.title = S.project + ' — Swiftec Security Center'; $('rootPath').textContent = S.root; $('branch').textContent = '⎇ ' + S.branch; $('last').textContent = fmtDate(S.lastScan);
+  const st = $('state'); st.textContent = S.state; st.title = S.staleFile ? 'Changed since last scan: ' + S.staleFile : ''; st.className = 'pill ' + ({ 'Scan Completed': 'ok', 'Scan Failed': 'critical', 'Rescan Required': 'medium', Scanning: 'low' }[S.state] || 'info');
+  donut();
+  $('heroCard').style.display = tab === 'home' && !poll ? 'none' : '';
+  $('warns').replaceChildren(...(S.warnings || []).map(w => h('div', { class: 'warn' }, w)),
+    !S.ai ? h('div', { class: 'mut', style: 'margin-top:8px;font-size:12px' }, 'AI features are off: install the claude CLI or set ANTHROPIC_API_KEY (SECSCAN_AI=claude-cli|anthropic-api).') : null);
+  const dis = S.state === 'Scanning';
+  ['bScan', 'bRescan', 'bChanged'].forEach(i => $(i).disabled = dis);
+  $('bRescan').style.display = S.lastScan ? '' : 'none'; $('bRescan').textContent = S.lastOnly ? 'Rescan File' : 'Rescan'; $('bChanged').style.display = S.lastOnly ? 'none' : '';
+  $('tabs').replaceChildren(h('div', { class: 'seg' }, ...[['home', 'Home'], ['new', 'New Scan'], ['findings', 'Findings'], ['deps', 'Dependencies'], ['scans', 'History']].map(([k, l]) => h('div', { class: tab === k || (tab === 'scan' && k === 'scans') ? 'on' : '', onclick: () => { tab = k; renderHead(); renderView(); } }, l))),
+    h('span', { class: 'sp' }),
+    ...['html', 'json', 'csv'].map(f => h('a', { href: `/api/export?fmt=${f}&token=${T}`, class: 'lnk', target: '_blank' }, f.toUpperCase())),
+    h('a', { href: '#', class: 'lnk', onclick: async e => { e.preventDefault(); if (confirm('Treat all current open findings as the baseline? Future scans will highlight only new issues.')) { const r = await api('baseline', {}); toast(`Baseline set (${r.baseline})`); load(); } } }, 'Set baseline'));
+}
+
+
+function donut() {
+  const NS = 'http://www.w3.org/2000/svg', el = $('donut'), cs = getComputedStyle(document.documentElement);
+  const css = v => cs.getPropertyValue(v).trim(), col = k => css('--' + (VAR[k] || k));
+  const total = SEV.reduce((a, k) => a + S.counts[k], 0), key = JSON.stringify(S.counts) + S.lastScan, animate = donut.key !== key && !matchMedia('(prefers-reduced-motion:reduce)').matches;
+  donut.key = key;
+  const R = 52, C = 2 * Math.PI * R, svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', 176); svg.setAttribute('height', 176); svg.setAttribute('viewBox', '0 0 140 140');
+  const mk = (t, at) => { const n = document.createElementNS(NS, t); for (const [k, v] of Object.entries(at)) n.setAttribute(k, v); return n; };
+  const ring = (stroke, len, off) => { const c = mk('circle', { cx: 70, cy: 70, r: R, fill: 'none', stroke, 'stroke-width': 13, transform: 'rotate(-90 70 70)', 'stroke-dashoffset': -off, 'stroke-dasharray': animate ? `0 ${C}` : `${len} ${C - len}` }); if (animate) { c.style.transition = 'stroke-dasharray .9s cubic-bezier(.32,.72,0,1)'; requestAnimationFrame(() => requestAnimationFrame(() => c.setAttribute('stroke-dasharray', `${len} ${C - len}`))); } return c; };
+  svg.append(ring(css('--code'), C, 0));
+  if (total) { let off = 0; const used = SEV.filter(k => S.counts[k]), gap = used.length > 1 ? 3 : 0;
+    for (const k of used) { const d = S.counts[k] / total * C, c = ring(col(k), Math.max(d - gap, 1), off); c.append(Object.assign(document.createElementNS(NS, 'title'), { textContent: `${SEVN[k]}: ${S.counts[k]}` })); svg.append(c); off += d; } }
+  const tx = (y, size, txt, fill, w) => { const t = mk('text', { x: 70, y, 'text-anchor': 'middle', 'font-size': size, 'font-weight': w || 400, fill, 'letter-spacing': size > 20 ? '-0.5' : '0' }); t.textContent = txt; return t; };
+  svg.append(tx(S.lastScan ? 76 : 80, 34, S.lastScan ? total : '–', css('--fg'), 700));
+  if (S.lastScan) svg.append(tx(93, 10.5, total === 1 ? 'open finding' : 'open findings', css('--mut')));
+  const sc = S.score >= 85 ? 'var(--ok)' : S.score >= 70 ? 'var(--med)' : 'var(--crit)';
+  const legend = h('div', { class: 'legend' },
+    ...SEV.map(k => h('div', { class: 'lg ' + k + (filters.sev === k ? ' on' : ''), onclick: () => { filters.sev = filters.sev === k ? '' : k; tab = 'findings'; renderHead(); renderView(); } },
+      h('span', { class: 'dot' }), h('span', { style: 'color:var(--fg);flex:1' }, SEVN[k]), h('b', { style: 'color:var(--fg)' }, S.counts[k]), h('span', { class: 'mut', style: 'width:38px;text-align:right' }, total ? Math.round(S.counts[k] / total * 100) + '%' : ''))),
+    S.lastScan ? h('div', { class: 'row', style: 'margin:8px 12px 0;padding-top:10px;border-top:1px solid var(--bd);gap:6px' }, h('span', { class: 'mut' }, 'Security score'), h('b', { style: 'color:' + sc + ';font-size:17px' }, S.score), h('span', { class: 'mut' }, '/ 100'), h('span', { class: 'sp' }), S.accepted ? h('span', { class: 'mut' }, S.accepted + ' accepted') : null) : null);
+  el.style.cssText = 'display:flex;gap:26px;align-items:center;flex-wrap:wrap';
+  el.replaceChildren(svg, legend);
+}
+
+function startPoll() {
+  $('prog').style.display = 'block';
+  poll = setInterval(async () => {
+    try {
+      const p = await api('progress');
+      $('steps').replaceChildren(...p.steps.map(s => h('div', {}, s.status === 'done' ? '[✓] ' : s.status === 'failed' ? '[!] ' : s.status === 'running' ? '[…] ' : '[ ] ', s.label)));
+      $('barI').style.width = p.pct + '%'; $('pct').textContent = p.pct; $('progCur').textContent = p.current ? '· ' + p.current : '';
+      if (p.state !== 'scanning') { clearInterval(poll); poll = null; if (p.state === 'failed') toast('Scan failed: ' + p.error, true); setTimeout(() => { $('prog').style.display = 'none'; load(); }, 800); }
+    } catch (e) { clearInterval(poll); poll = null; }
+  }, 600);
+}
+const opts = { gitHistory: false, ai: false };
+async function doScan(mode) {
+  active = true;
+  await api('scan', S.lastOnly && mode === 'full' ? { only: S.lastOnly, label: S.lastOnly[0].startsWith('paste-') ? 'snippet' : 'file', ai: opts.ai } : { mode, gitHistory: opts.gitHistory, ai: opts.ai }); tab = 'findings';
+  $('steps').replaceChildren(); $('barI').style.width = '0'; S.state = 'Scanning'; renderHead(); startPoll();
+}
+$('bScan').onclick = () => { tab = 'new'; renderHead(); renderView(); };
+$('bRescan').onclick = guard($('bRescan'), () => doScan('full'));
+$('bChanged').onclick = guard($('bChanged'), () => doScan('changed'));
+const closeDrawer = () => { $('drawer').classList.remove('open'); $('scrim').classList.remove('on'); openId = null; };
+$('scrim').onclick = () => closeDrawer();
+$('bHistory').onclick = () => { tab = 'scans'; renderHead(); renderView(); };
+
+function visible() {
+  const f = filters, q = f.q.toLowerCase(), last = scans[0];
+  return F.filter(x =>
+    (!f.sev || x.severity === f.sev) && (!f.cat || x.category === f.cat) &&
+    (f.st === 'active' ? ACTIVE.includes(x.status) : f.st === 'all' ? true : x.status === f.st) &&
+    (!f.scanner || x.detectedBy.includes(f.scanner)) && (!f.lang || ext(x) === f.lang) &&
+    (!q || (x.id + x.title + x.file + x.category + x.cwe).toLowerCase().includes(q)) &&
+    (f.view === 'all' || (f.view === 'new' && last && x.firstScan === last.id && !x.baseline) || (f.view === 'nobase' && !x.baseline) || (f.view === 'reopened' && x.reopened) || (f.view === 'resolved' && x.status === 'resolved'))
+  ).sort((a, b) => SEV.indexOf(a.severity) - SEV.indexOf(b.severity) || a.file.localeCompare(b.file) || a.line - b.line);
+}
+const uniq = k => [...new Set(F.flatMap(x => [].concat(x[k])))].filter(Boolean).sort();
+const sel = (key, label, opts) => h('select', { onchange: e => { filters[key] = e.target.value; renderView(); } }, h('option', { value: '' }, label), ...opts.map(o => h('option', { value: o[0] ?? o, selected: filters[key] === (o[0] ?? o) }, o[1] ?? o)));
+
+function renderView() {
+  const v = $('view');
+  if (tab === 'home') return v.replaceChildren(homeView());
+  if (tab === 'new') return v.replaceChildren(newScanView());
+  if (tab === 'scan') return v.replaceChildren(scanDetailView());
+  if (tab === 'deps') return v.replaceChildren(depsView());
+  if (tab === 'scans') return v.replaceChildren(scansView());
+  if (!S.lastScan && !F.length) return v.replaceChildren(h('div', { class: 'card mut' }, 'No scan yet. Press “Scan Project” to analyse the repository.'));
+  const list = visible(), bar = h('div', { class: 'row', style: 'margin-bottom:8px' },
+    h('input', { placeholder: 'Search findings…', value: filters.q, style: 'min-width:220px', oninput: e => { filters.q = e.target.value; clearTimeout(renderView.t); renderView.t = setTimeout(() => { renderView(); const i = $('view').querySelector('input'); i.focus(); i.setSelectionRange(99, 99); }, 250); } }),
+    sel('sev', 'Severity', SEV.map(k => [k, SEVN[k]])), sel('cat', 'Category', uniq('category')),
+    h('select', { onchange: e => { filters.st = e.target.value; renderView(); } }, h('option', { value: 'active', selected: filters.st === 'active' }, 'Status: active'), h('option', { value: 'all', selected: filters.st === 'all' }, 'Status: all'), ...Object.entries(STATUS).map(([k, l]) => h('option', { value: k, selected: filters.st === k }, l))),
+    sel('scanner', 'Scanner', uniq('detectedBy')), sel('lang', 'Language', [...new Set(F.map(ext))].sort()),
+    h('select', { onchange: e => { filters.view = e.target.value; renderView(); } }, ...[['all', 'All issues'], ['new', 'New in last scan'], ['nobase', 'Not in baseline'], ['reopened', 'Reopened'], ['resolved', 'Resolved issues']].map(([k, l]) => h('option', { value: k, selected: filters.view === k }, l))),
+    h('span', { class: 'mut' }, `${list.length} shown`));
+  const out = [bar];
+  const d = scans[0] && scans[0].diff;
+  if (d) out.push(h('div', { class: 'mut', style: 'margin-bottom:6px' }, `Last scan: ${d.resolved.length} resolved · ${d.new.length} new · ${d.unchanged.length} unchanged · ${d.reopened.length} reopened`));
+  for (const k of SEV) {
+    const g = list.filter(x => x.severity === k); if (!g.length) continue;
+    out.push(h('div', { class: 'grp ' + k }, h('span', { class: 'dot' }), `${SEVN[k]} (${g.length})`), h('div', { class: 'grid' }, g.slice(0, 300).map(card)));
+    if (g.length > 300) out.push(h('div', { class: 'mut' }, `…${g.length - 300} more — use filters`));
+  }
+  if (!list.length) out.push(h('div', { class: 'card mut' }, 'No findings match the current filters.'));
+  v.replaceChildren(...out);
+}
+
+const card = f => h('div', { class: 'f ' + f.severity, onclick: () => openDrawer(f.id) },
+  h('div', { class: 'row' }, pill(f.severity.toUpperCase(), f.severity), h('span', { class: 't' }, f.title), h('span', { class: 'sp' }), h('small', {}, f.id)),
+  h('small', { class: 'mono' }, f.file + (f.line ? ':' + f.line : '')),
+  h('div', {}, h('small', {}, `${f.category} · ${KIND[f.kind] || f.kind} · confidence ${f.confidence} · `), pill(STATUS[f.status], f.status === 'resolved' ? 'ok' : 'info'), f.baseline ? h('small', {}, ' · baseline') : null, f.env === 'debug' ? h('small', {}, ' · debug-only') : null),
+  h('div', { class: 'row', style: 'margin-top:6px' }, h('button', { class: 'sm', onclick: e => { e.stopPropagation(); openDrawer(f.id); } }, 'View Details'),
+    h('button', { class: 'sm', disabled: !S.ai, onclick: e => { e.stopPropagation(); openDrawer(f.id, 'ask'); } }, 'Ask AI for Solution')));
+
+function depsView() {
+  const d = F.filter(f => f.dep && ACTIVE.includes(f.status)).sort((a, b) => SEV.indexOf(a.severity) - SEV.indexOf(b.severity));
+  if (!d.length) return h('div', { class: 'card mut' }, 'No vulnerable dependencies recorded (run a scan with network access to OSV.dev).');
+  return h('div', { class: 'card', style: 'overflow:auto' }, h('table', {}, h('thead', {}, h('tr', {}, ['Dependency', 'Current Version', 'Affected Version', 'Severity', 'CVE', 'Fixed Version', 'File'].map(x => h('th', {}, x)))),
+    h('tbody', {}, d.map(f => h('tr', { style: 'cursor:pointer', onclick: () => openDrawer(f.id) }, h('td', {}, f.dep.name), h('td', {}, f.dep.current), h('td', {}, f.dep.affected), h('td', {}, pill(f.severity, f.severity)), h('td', {}, f.dep.cve), h('td', {}, f.dep.fixed), h('td', { class: 'mono' }, f.file))))));
+}
+
+const MODE = { full: 'Full scan', changed: 'Changed files', file: 'Single file', snippet: 'Pasted code', import: 'Agent import' };
+const delBtn = x => h('button', { class: 'sm', title: 'Delete this scan from history', onclick: async e => { e.stopPropagation(); if (!confirm(`Delete this scan from history?\n${scanLabel(x)}`)) return; try { await api('scan-delete', { id: x.id }); toast('Scan deleted'); await load(); } catch (er) { toast(er.message, true); } } }, 'Delete');
+async function clearAllHistory() {
+  if (!confirm('Clear ALL history for this project?\n\nThis removes every scan, all findings (including accepted risks and false-positive notes) and AI-fix backups. A new scan starts fresh.')) return;
+  try { await api('history-clear', {}); toast('History cleared'); active = false; await load(); } catch (er) { toast(er.message, true); }
+}
+const scanLabel = x => `${fmtDate(x.finishedAt)} — ${MODE[x.mode] || x.mode}`;
+function trendChart() {
+  const NS = 'http://www.w3.org/2000/svg', pts = scans.slice(0, 10).reverse(), n = pts.length;
+  const slot = 96, L = 40, R = 16, T = 30, B = 46, H = 230, W = L + R + n * slot, mx = Math.max(...pts.map(p => p.total), 1);
+  const niceMax = Math.max(4, Math.ceil(mx / 4) * 4), Y = v => H - B - v / niceMax * (H - B - T), cs = getComputedStyle(document.documentElement);
+  const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.cssText = `width:100%;max-width:${W * 1.4}px;height:auto;display:block`;
+  const el = (t, at, txt) => { const e = document.createElementNS(NS, t); for (const [k, v] of Object.entries(at)) e.setAttribute(k, v); if (txt != null) e.textContent = txt; return e; };
+  for (let i = 0; i <= 4; i++) { const v = niceMax / 4 * i; svg.append(el('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: cs.getPropertyValue('--bd') }), el('text', { x: L - 8, y: Y(v) + 4, 'text-anchor': 'end', 'font-size': 11, fill: cs.getPropertyValue('--mut') }, Math.round(v))); }
+  pts.forEach((p, i) => {
+    const cx = L + i * slot + slot / 2, bw = 44; let acc = 0;
+    const g = el('g', {}); g.append(el('title', {}, `${scanLabel(p)}\n${p.total} open: ` + SEV.map(k => `${SEVN[k]} ${p.counts[k]}`).join(', ')));
+    for (const k of ['info', 'low', 'medium', 'high', 'critical']) { const v = p.counts[k]; if (!v) continue; const y1 = Y(acc + v), y0 = Y(acc); g.append(el('rect', { x: cx - bw / 2, y: y1, width: bw, height: Math.max(y0 - y1 - 1, 1), rx: 3, fill: cs.getPropertyValue('--' + (VAR[k] || k)) })); acc += v; }
+    const d = new Date(p.finishedAt);
+    g.append(el('text', { x: cx, y: Y(p.total) - 8, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: cs.getPropertyValue('--fg') }, p.total),
+      el('text', { x: cx, y: H - 26, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 600, fill: cs.getPropertyValue('--fg') }, d.toLocaleDateString([], { day: 'numeric', month: 'short' })),
+      el('text', { x: cx, y: H - 11, 'text-anchor': 'middle', 'font-size': 10.5, fill: cs.getPropertyValue('--mut') }, d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })));
+    svg.append(g);
+  });
+  return svg;
+}
+const trendNote = () => {
+  const pts = scans.slice(0, 10).reverse(), first = pts[0], last = pts[pts.length - 1], d = last.total - first.total;
+  return d < 0 ? `Down by ${-d} since ${fmtDate(first.finishedAt)} — issues are being fixed.` : d > 0 ? `Up by ${d} since ${fmtDate(first.finishedAt)}.` : `No change across the last ${pts.length} scans (${last.total} open).`;
+};
+function scansView() {
+  const out = [];
+  if (!scans.length) return h('div', { class: 'card mut' }, 'No scans yet. Start one from New Scan.');
+  if (scans.length > 1) out.push(h('div', { class: 'card' }, h('b', {}, 'Open findings over time'), h('div', { style: 'margin:2px 0 8px;font-size:14px' }, trendNote()), h('div', { class: 'mut', style: 'font-size:12.5px;margin-bottom:8px' }, 'Each bar is one scan, split by severity.'), trendChart(), h('div', { class: 'row', style: 'gap:16px;margin-top:8px;font-size:12.5px' }, ...SEV.map(k => h('span', { class: k }, h('span', { class: 'dot', style: 'margin-right:6px' }), h('span', { style: 'color:var(--mut)' }, SEVN[k]))))));
+  const opt = (x, i, sel) => h('option', { value: x.id, selected: i === sel }, scanLabel(x));
+  const a = h('select', {}, scans.map((x, i) => opt(x, i, 1))), b = h('select', {}, scans.map((x, i) => opt(x, i, 0))), res = h('div', { style: 'margin-top:10px' });
+  if (scans.length > 1) out.push(h('div', { class: 'card', style: 'margin-top:12px' }, h('b', {}, 'Compare two scans'), h('div', { class: 'mut', style: 'font-size:13px;margin:2px 0 8px' }, 'Pick an earlier scan and a later one to see what changed.'),
+    h('div', { class: 'row' }, h('span', { class: 'mut' }, 'Earlier'), a, h('span', { class: 'mut' }, 'Later'), b, h('button', { class: 'sm pri', onclick: async () => {
+      const c = await api(`compare?a=${a.value}&b=${b.value}`), name = id => scanLabel(scans.find(x => x.id === id));
+      res.replaceChildren(h('div', { class: 'mut' }, `${name(c.a.id)}  →  ${name(c.b.id)}`),
+        h('div', { class: 'row', style: 'margin-top:8px;gap:22px' }, ...SEV.map(k => h('div', {}, h('div', { class: k, style: 'font-weight:600' }, SEVN[k]), h('div', {}, `${c.a.counts[k]} → ${c.b.counts[k]}`)))),
+        h('div', { style: 'margin-top:8px' }, h('b', { class: 'ok' }, `${c.resolved.length} fixed`), ' · ', h('b', { class: 'bad' }, `${c.new.length} new`), ' · ', h('span', { class: 'mut' }, `${c.unchanged.length} unchanged`)));
+    } }, 'Compare')), res));
+  out.push(h('div', { class: 'card', style: 'margin-top:12px;overflow:auto' }, h('div', { class: 'row' }, h('b', {}, 'All scans'), h('span', { class: 'sp' }), h('button', { class: 'sm', onclick: clearAllHistory }, 'Clear all history')), h('div', { class: 'mut', style: 'font-size:13px' }, 'Click a row to open its results. History is kept for 7 days, then removed automatically. The newest scan is always kept.'), h('table', {}, h('thead', {}, h('tr', {}, ['When', 'Type', 'Open findings', 'Critical', 'High', 'Medium', 'Low', 'New', 'Fixed', 'Score', ''].map(x => h('th', {}, x)))),
+    h('tbody', {}, scans.map(x => h('tr', { style: 'cursor:pointer', title: 'Open this scan', onclick: () => { viewScan = x.id; tab = 'scan'; renderHead(); renderView(); } }, h('td', {}, fmtDate(x.finishedAt)), h('td', {}, MODE[x.mode] || x.mode), h('td', {}, h('b', {}, x.total)), h('td', { class: 'critical' }, x.counts.critical), h('td', { class: 'high' }, x.counts.high), h('td', { class: 'medium' }, x.counts.medium), h('td', { class: 'low' }, x.counts.low), h('td', {}, x.diff.new.length), h('td', {}, x.diff.resolved.length), h('td', {}, x.score), h('td', {}, delBtn(x))))))));
+  return h('div', {}, out);
+}
+
+
+
+
+const ICON = {
+  folder: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+  diff: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+  package: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+  history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+};
+const icon = n => { const t = document.createElement('template'); t.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`; return t.content.firstChild; };
+
+// ───────── Home ─────────
+let active = false;
+const go = (t, kind) => { if (['findings', 'deps', 'scans'].includes(t)) active = true; tab = t; if (kind) srcKind = kind; renderHead(); renderView(); };
+
+function recentList() {
+  const box = h('div', { class: 'tiles', style: 'grid-template-columns:repeat(auto-fill,minmax(340px,1fr))' }, h('div', { class: 'mut' }, 'Loading…'));
+  api('projects').then(ps => box.replaceChildren(...(ps.length ? ps.map(p => h('div', { class: 'tile', style: 'min-height:0;padding:18px 20px', onclick: () => switchProject(p.root).then(() => go('findings')) },
+    h('b', {}, p.name), h('small', { class: 'mono mut', style: 'word-break:break-all' }, p.root),
+    p.last ? h('div', { style: 'margin-top:10px' }, SEV.map(k => h('small', { class: k, style: 'margin-right:12px;font-weight:600' }, `${SEVN[k].slice(0, 4)} ${p.last.counts[k]}`)), h('div', { class: 'mut', style: 'font-size:12px;margin-top:2px' }, `Last scan ${fmtDate(p.last.at)} · score ${p.last.score}`)) : h('small', { class: 'mut', style: 'margin-top:10px' }, 'never scanned'))) : [h('div', { class: 'mut' }, 'No recent projects yet — start with a scan above.')]))).catch(() => box.replaceChildren('Could not load recent projects.'));
+  return box;
+}
+function homeView() {
+  const open = F.filter(f => ACTIVE.includes(f.status)), deps = open.filter(f => f.dep).length;
+  const tile = (icon, color, title, desc, onclick, n) => h('div', { class: 'tile', onclick }, h('div', { class: 'ic', style: 'background:' + color }, icon), h('b', {}, title), h('div', { class: 'mut', style: 'margin-top:2px' }, desc), n != null ? h('div', { class: 'n' }, n) : null);
+  const sec = t => h('h3', { style: 'margin:30px 4px 12px' }, t);
+  const link = (l, href) => h('a', { href, target: '_blank', class: 'lnk', style: 'margin:0 14px 0 0' }, l);
+  return h('div', {},
+    h('div', { class: 'row', style: 'gap:18px;margin-top:6px' }, h('img', { src: '/assets/logo-128.png', alt: '', style: 'width:72px;height:72px;border-radius:18px;box-shadow:0 8px 24px rgba(49,136,255,.35)' }), h('div', {}, h('div', { class: 'home-h', style: 'margin:0' }, 'Swiftec Security Center'), h('div', { class: 'tagline', style: 'margin-top:6px' }, 'Service Station Transformation'))),
+    h('div', { style: 'height:10px' }),
+    h('div', { class: 'mut', style: 'font-size:16px' }, active && S.lastScan ? `${S.project} · ${open.length} open findings · score ${S.score}/100` : 'Scan your code, understand the risks, fix them, and verify.'),
+    sec('Scan'),
+    h('div', { class: 'tiles' },
+      tile(icon('folder'), 'var(--pri)', 'Scan a project', 'Whole folder: source, config, dependencies, secrets.', () => go('new', 'project')),
+      tile(icon('file'), '#5856d6', 'Scan a file', 'Pick one source or config file.', () => go('new', 'file')),
+      tile(icon('code'), '#34c759', 'Paste code', 'Check a snippet without saving a project.', () => go('new', 'code')),
+      tile(icon('diff'), '#ff9500', 'Changed files', 'Only git staged / modified files.', guard(document.createElement('button'), () => doScan('changed')))),
+    active ? [sec('Results — ' + S.project),
+      h('div', { class: 'tiles' },
+        tile(icon('shield'), 'var(--crit)', 'Findings', 'Everything the last scan found.', () => go('findings'), open.length),
+        tile(icon('package'), '#af52de', 'Dependencies', 'Known vulnerable packages.', () => go('deps'), deps),
+        tile(icon('history'), '#8e8e93', 'Scan history', 'Open and compare previous scans.', () => go('scans'), scans.length))] : [sec('Recent projects'), recentList()],
+    sec('Reports & settings'),
+    !active ? h('div', { class: 'mut', style: 'margin-left:4px' }, `AI: ${S.ai || 'off'} · external scanners: ${(S.externalTools || []).join(', ') || 'none installed'}. Open a project to export its report.`) : h('div', { class: 'card' }, h('div', { class: 'row' }, h('b', {}, 'Export report'), link('HTML (printable / PDF)', `/api/export?fmt=html&token=${T}`), link('JSON', `/api/export?fmt=json&token=${T}`), link('CSV', `/api/export?fmt=csv&token=${T}`), h('span', { class: 'sp' }),
+      h('button', { class: 'sm', onclick: async () => { if (confirm('Treat all current open findings as the baseline? Future scans will highlight only new issues.')) { const r = await api('baseline', {}); toast(`Baseline set (${r.baseline})`); load(); } } }, 'Set baseline')),
+      h('div', { class: 'mut', style: 'margin-top:8px;font-size:13px' }, `AI: ${S.ai || 'off'} · external scanners: ${(S.externalTools || []).join(', ') || 'none installed'}`)));
+}
+$('brand').onclick = () => go('home');
+
+// ───────── New Scan view ─────────
+let viewScan = null;
+async function switchProject(path) {
+  let r;
+  try { r = await api('project', path ? { path } : {}); }
+  catch (e) { if (path || !/picker/i.test(e.message)) throw e; const p = prompt(e.message + '\nPaste the full folder path:'); if (!p) return; r = await api('project', { path: p }); }
+  if (r.cancelled) return;
+  active = true; filters = { sev: '', cat: '', st: 'active', scanner: '', lang: '', q: '', view: 'all' }; closeDrawer(); await load(); toast('Project: ' + r.root);
+}
+let srcKind = 'project';
+function newScanView() {
+  const seg = h('div', { class: 'seg', style: 'margin-bottom:14px' }, ...[['project', 'Project folder'], ['file', 'Single file'], ['code', 'Paste code']].map(([k, l]) => h('div', { class: srcKind === k ? 'on' : '', onclick: () => { srcKind = k; renderView(); } }, l)));
+  if (srcKind === 'file') return h('div', {}, seg, fileScanCard());
+  if (srcKind === 'code') return h('div', {}, seg, codeScanCard());
+  return h('div', {}, seg, projectScanCard());
+}
+function projectScanCard() {
+  const list = h('div', { class: 'mut' }, 'Loading recent projects…');
+  api('projects').then(ps => list.replaceChildren(...(ps.length ? ps.map(p => h('div', { class: 'f', style: p.current ? 'box-shadow:0 0 0 2px var(--pri)' : '', onclick: () => switchProject(p.root) },
+    h('div', { class: 'row' }, h('b', {}, p.name), p.current ? pill('selected', 'low') : null, h('span', { class: 'sp' }), p.last ? h('small', {}, `Last scan ${fmtDate(p.last.at)} · score ${p.last.score}`) : h('small', {}, 'never scanned')),
+    h('small', { class: 'mono' }, p.root),
+    p.last ? h('div', { style: 'margin-top:4px' }, SEV.map(k => h('small', { class: k, style: 'margin-right:12px' }, `${SEVN[k]} ${p.last.counts[k]}`))) : null)) : [h('div', { class: 'mut' }, 'No recent projects yet.')]))).catch(() => list.replaceChildren('Could not load recent projects.'));
+  const path = h('input', { placeholder: '…or paste a folder path', style: 'flex:1;min-width:260px' });
+  const mode = (v, l, on) => h('label', { style: 'display:block;margin:4px 0' }, h('input', { type: 'radio', name: 'mode', value: v, checked: on }), ' ' + l);
+  const git = h('input', { type: 'checkbox', checked: opts.gitHistory, onchange: e => opts.gitHistory = e.target.checked });
+  const ai = h('input', { type: 'checkbox', checked: opts.ai, disabled: !S.ai, onchange: e => opts.ai = e.target.checked });
+  const start = h('button', { class: 'pri' }, 'Start Scan');
+  start.onclick = guard(start, () => doScan(document.querySelector('input[name=mode]:checked').value));
+  return h('div', {},
+    h('div', { class: 'card' }, h('h3', { style: 'margin-top:0' }, '1 · Choose the project folder'),
+      h('div', { class: 'row' }, h('div', {}, h('div', { class: 'mut' }, 'Selected'), h('div', { class: 'mono' }, S.root)), h('span', { class: 'sp' }), (b => { b.onclick = guard(b, () => switchProject()); return b; })(h('button', { class: 'pri' }, 'Choose Folder…'))),
+      h('div', { class: 'row', style: 'margin-top:10px' }, path, (b => { b.onclick = guard(b, () => path.value.trim() && switchProject(path.value.trim())); return b; })(h('button', {}, 'Use path'))),
+      h('h3', {}, 'Recent projects & their last results'), list),
+    h('div', { class: 'card', style: 'margin-top:12px' }, h('h3', { style: 'margin-top:0' }, '2 · What to scan'),
+      mode('full', 'Full project scan', true), mode('changed', 'Changed files only (git staged / modified / vs target branch)', false),
+      h('label', { style: 'display:block;margin-top:8px' }, git, ' Also scan Git history for removed secrets'),
+      h('label', { style: 'display:block' }, ai, ' AI contextual review', S.ai ? '' : h('span', { class: 'mut' }, ' (needs the claude CLI or ANTHROPIC_API_KEY)')),
+      h('div', { style: 'margin-top:12px' }, start)));
+}
+
+
+const LANGS = [['dart', 'Dart / Flutter'], ['kotlin', 'Kotlin'], ['java', 'Java'], ['swift', 'Swift'], ['js', 'JavaScript'], ['ts', 'TypeScript'], ['python', 'Python'], ['manifest', 'AndroidManifest.xml'], ['gradle', 'build.gradle (Groovy)'], ['gradlekts', 'build.gradle.kts'], ['nsc', 'network_security_config.xml'], ['plist', 'Info.plist'], ['pubspec', 'pubspec.yaml'], ['rules', 'Firebase rules'], ['docker', 'Dockerfile'], ['props', '.properties / config']];
+const afterStart = async () => { active = true; tab = 'findings'; filters = { sev: '', cat: '', st: 'active', scanner: '', lang: '', q: '', view: 'all' }; await load(); S.state = 'Scanning'; renderHead(); startPoll(); };
+function fileScanCard() {
+  const path = h('input', { placeholder: '…or paste a full file path', style: 'flex:1;min-width:260px' });
+  const go = async body => { try { const r = await api('scan-file', body); if (!r.cancelled) await afterStart(); } catch (e) { if (!body.path && /picker/i.test(e.message)) { const p = prompt(e.message + '\nPaste the full file path:'); if (p) return go({ path: p }); } else throw e; } };
+  const choose = h('button', { class: 'pri' }, 'Choose File…'), use = h('button', {}, 'Scan this path');
+  choose.onclick = guard(choose, () => go({ ai: opts.ai })); use.onclick = guard(use, () => path.value.trim() && go({ path: path.value.trim(), ai: opts.ai }));
+  return h('div', { class: 'card' }, h('h3', { style: 'margin-top:0' }, 'Scan one file'),
+    h('div', { class: 'mut' }, 'Pick any source or config file (.dart .kt .java .swift .js .py AndroidManifest.xml build.gradle …). Only that file is scanned; fixes apply to the real file.'),
+    h('div', { class: 'row', style: 'margin-top:14px' }, choose), h('div', { class: 'row', style: 'margin-top:10px' }, path, use),
+    h('label', { style: 'display:block;margin-top:12px' }, h('input', { type: 'checkbox', checked: opts.ai, disabled: !S.ai, onchange: e => opts.ai = e.target.checked }), ' AI contextual review'));
+}
+function codeScanCard() {
+  const lang = h('select', {}, h('option', { value: '' }, 'What kind of code is this?'), ...LANGS.map(([v, l]) => h('option', { value: v }, l)));
+  const code = h('textarea', { rows: 16, class: 'mono', placeholder: 'Paste the code here…', spellcheck: 'false', style: 'margin-top:10px' });
+  const go = h('button', { class: 'pri' }, 'Scan Code');
+  go.onclick = guard(go, async () => { await api('scan-snippet', { code: code.value, lang: lang.value, ai: opts.ai }); await afterStart(); });
+  return h('div', { class: 'card' }, h('h3', { style: 'margin-top:0' }, 'Scan a piece of code'),
+    h('div', { class: 'mut' }, 'The snippet is saved under a scratch folder (~/.secscan-scratch) so it appears in History like any other scan. The type decides which rules apply (for example manifest rules only run on AndroidManifest.xml).'),
+    h('div', { class: 'row', style: 'margin-top:12px' }, lang, h('span', { class: 'sp' }), go), code);
+}
+
+// ───────── Scan detail (old results) ─────────
+function scanDetailView() {
+  const box = h('div', {}, h('div', { class: 'mut' }, 'Loading…'));
+  if (!viewScan) { tab = 'scans'; return scansView(); }
+  api('scan/' + viewScan).then(d => {
+    const s = d.scan, row = f => h('tr', { style: 'cursor:pointer', onclick: () => openDrawer(f.id) }, h('td', {}, pill(f.severity.toUpperCase(), f.severity)), h('td', {}, f.id), h('td', {}, f.title), h('td', { class: 'mono' }, f.file + (f.line ? ':' + f.line : '')), h('td', {}, STATUS[f.status] || f.status));
+    const tbl = (title, list) => h('div', { class: 'card', style: 'margin-top:10px;overflow:auto' }, h('b', {}, `${title} (${list.length})`), list.length ? h('table', {}, h('thead', {}, h('tr', {}, ['Severity', 'ID', 'Title', 'Location', 'Status'].map(x => h('th', {}, x)))), h('tbody', {}, list.sort((a, b) => SEV.indexOf(a.severity) - SEV.indexOf(b.severity)).map(row))) : h('div', { class: 'mut' }, 'None'));
+    const idx = scans.findIndex(x => x.id === s.id), prev = scans[idx + 1];
+    box.replaceChildren(
+      h('div', { class: 'card' }, h('div', { class: 'row' }, h('button', { class: 'sm', onclick: () => { tab = 'scans'; renderHead(); renderView(); } }, '← Scan History'), h('b', {}, scanLabel(s)), h('span', { class: 'mut' }, `branch ${s.branch}`), h('span', { class: 'sp' }), h('span', { class: 'pill info' }, `score ${s.score}/100`), delBtn(s)),
+        h('div', { class: 'chips', style: 'margin-top:10px' }, SEV.map(k => h('div', { class: 'chip ' + k, style: 'cursor:default' }, h('b', {}, s.counts[k]), SEVN[k]))),
+        h('div', { class: 'mut', style: 'margin-top:8px' }, `${s.diff.new.length} new · ${s.diff.resolved.length} resolved · ${s.diff.unchanged.length} unchanged · ${s.diff.reopened.length} reopened` + (prev ? ` (compared with the scan on ${fmtDate(prev.finishedAt)})` : '')),
+        h('div', { class: 'mut' }, 'Checked: ' + s.steps.join(', ')), ...(s.warnings || []).map(w => h('div', { class: 'warn' }, w))),
+      tbl('New in this scan', d.present.filter(f => f.isNew)), tbl('Resolved by this scan', d.resolved), tbl('Open at this scan (status as recorded then)', d.present),
+      h('div', { class: 'mut', style: 'margin-top:6px;font-size:12px' }, 'Click a finding to see its current state.'));
+  }).catch(e => box.replaceChildren(h('div', { class: 'bad' }, e.message)));
+  return box;
+}
+
+// ───────── finding details ─────────
+async function openDrawer(id, focus) {
+  openId = id;
+  const f = await api('finding/' + id).catch(e => { toast(e.message, true); });
+  if (!f) return;
+  const d = $('drawer'); d.classList.add('open'); $('scrim').classList.add('on');
+  const reload = async () => { await load(); if (openId === id) openDrawer(id); };
+  const act = (label, fn, cls = '') => { const b = h('button', { class: cls + ' sm' }, label); b.onclick = guard(b, fn); return b; };
+  const sec = (t, ...c) => h('div', {}, h('h3', {}, t), ...c);
+
+  const ctx = f.context && h('div', { class: 'ctx mono card', style: 'padding:6px 0;overflow:auto' }, f.context.lines.map((l, i) => h('div', { class: f.context.start + i === f.context.hit ? 'hit' : '' }, h('span', {}, f.context.start + i), l)));
+  const chat = h('div', { class: 'chat' }, (f.chat || []).map(m => h('div', { class: 'm ' + (m.role === 'ai' ? '' : 'dev') }, m.text)));
+  const q = h('textarea', { rows: 2, placeholder: 'Ask about this finding…' });
+  const ask = async text => { const box = h('div', { class: 'm mut' }, 'Thinking…'); chat.append(h('div', { class: 'm dev' }, text), box); try { const r = await api(`finding/${id}/ask`, { question: text }); box.className = 'm'; box.textContent = r.answer; } catch (e) { box.textContent = e.message; box.className = 'm bad'; } };
+  const quick = ['Explain this issue.', 'How dangerous is this?', 'Can this happen in release mode?', 'Show the secure implementation.', 'Will this change break existing behavior?', 'What files need to be changed?'];
+
+  const p = f.proposal, fixBox = h('div', {});
+  const mode = h('select', {}, ['minimal', 'recommended', 'hardened'].map(m => h('option', { value: m, selected: m === 'recommended' }, { minimal: 'Minimal Fix', recommended: 'Recommended Fix', hardened: 'Production-Hardened Fix' }[m])));
+  const showProposal = p => {
+    const ok = h('input', { type: 'checkbox' }), vb = h('input', { type: 'checkbox' }), apply = h('button', { class: 'pri sm', disabled: true }, 'Apply Fix');
+    ok.onchange = () => apply.disabled = !ok.checked;
+    apply.onclick = guard(apply, async () => {
+      const r = await api(`finding/${id}/apply`, { proposalId: p.id, approve: true, verifyBuild: vb.checked });
+      toast(`${r.rescan.message}${r.verification.build !== 'skipped' ? ' · Build verification ' + r.verification.build : ''}`, !r.rescan.resolved || r.verification.build === 'failed'); reload();
+    });
+    fixBox.replaceChildren(
+      h('div', {}, p.summary), p.sensitive ? h('div', { class: 'warn' }, 'Security-sensitive change (auth / certificates / crypto / networking). Review the diff carefully.') : null,
+      h('div', { class: 'diff mono card', style: 'padding:6px 0;overflow:auto;margin-top:8px' }, p.diff ? p.diff.split('\n').map(l => h('div', { class: l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : '', style: 'padding:0 8px' }, l)) : h('div', { style: 'padding:0 8px' }, 'No code change proposed.')),
+      p.sideEffects ? h('div', { class: 'mut', style: 'margin-top:6px' }, 'Side effects: ' + p.sideEffects) : null, p.manualSteps ? h('div', { style: 'margin-top:4px' }, 'Manual steps: ' + p.manualSteps) : null,
+      h('div', { class: 'row', style: 'margin-top:8px' }, h('label', {}, ok, ' I reviewed this diff'), h('label', { class: 'mut' }, vb, ' run build/analyze after')),
+      h('div', { class: 'row', style: 'margin-top:6px' }, apply,
+        h('button', { class: 'sm', onclick: () => { navigator.clipboard.writeText(p.diff).then(() => toast('Fix copied')).catch(() => toast('Copy failed', true)); } }, 'Copy Fix'),
+        h('button', { class: 'sm', onclick: () => api(`finding/${id}/open`, {}).then(r => toast('Opened ' + r.opened)) }, 'Open in Editor'),
+        act('Cancel', async () => { await api(`finding/${id}/cancel-fix`, {}); reload(); })));
+  };
+  if (p) showProposal(p);
+
+  const v = f.verification;
+  const rows = [['Category', f.category], ['File', f.file + (f.line ? ':' + f.line : '')], ['Detected by', f.detectedBy.join(', ')], ['Type', KIND[f.kind] || f.kind], ['Confidence', f.confidence + (f.detectedBy.length === 1 && f.detectedBy[0] === 'Claude AI' ? ' (AI-only finding)' : '')], ['Environment', f.env], ['Standards', [f.cwe, f.owasp, f.masvs].filter(Boolean).join(' · ') || '-'], ['First seen', fmtDate(f.firstSeen)], f.commit ? ['Commit', f.commit] : null].filter(Boolean);
+  d.replaceChildren(
+    h('div', { class: 'row' }, h('b', {}, f.id), pill(f.severity.toUpperCase(), f.severity), pill(STATUS[f.status], f.status === 'resolved' ? 'ok' : 'info'), h('span', { class: 'sp' }), h('button', { class: 'sm', onclick: () => closeDrawer() }, 'Close')),
+    h('h2', { style: 'margin:8px 0' }, f.title),
+    h('div', { class: 'kv' }, rows.flatMap(([k, val]) => [h('div', {}, k), h('div', {}, val)])),
+    f.statusNote ? h('div', { class: 'warn' }, f.statusNote) : null,
+    v ? h('div', { class: 'row', style: 'margin-top:8px' }, pill('Security: ' + v.security.replace('_', ' '), v.security === 'resolved' ? 'ok' : 'bad'), pill('Build: ' + v.build, v.build === 'passed' ? 'ok' : v.build === 'failed' ? 'bad' : 'info')) : null,
+    f.accept ? h('div', { class: 'warn' }, 'Accepted risk: ' + f.accept.reason, f.accept.expiry ? ` · review ${f.accept.expiry}` : '', f.accept.approvedBy ? ` · by ${f.accept.approvedBy}` : '', f.accept.ticket ? ` · ${f.accept.ticket}` : '') : null,
+    f.fpNote ? h('div', { class: 'warn' }, 'False positive: ' + f.fpNote) : null,
+    f.code ? sec('Detected Code', h('pre', {}, f.code)) : null, f.context ? sec('Context', ctx) : null,
+    sec('Description', h('div', {}, f.description)), f.risk ? sec('Risk', h('div', {}, f.risk)) : null,
+    f.impact && f.impact.length ? sec('Possible Impact', h('ul', { style: 'margin:0;padding-left:18px' }, f.impact.map(x => h('li', {}, x)))) : null,
+    f.fix ? sec('Recommended Fix', h('div', {}, f.fix)) : null,
+    f.dep ? sec('Dependency', h('div', { class: 'kv' }, Object.entries({ Name: f.dep.name, Current: f.dep.current, Affected: f.dep.affected, Fixed: f.dep.fixed, Advisory: f.dep.cve }).flatMap(([k, x]) => [h('div', {}, k), h('div', {}, x)]))) : null,
+    sec('Actions', h('div', { class: 'row' },
+      act('Open File', () => api(`finding/${id}/open`, {}).then(r => toast('Opened ' + r.opened))),
+      act('Rescan Finding', async () => { const r = await api(`finding/${id}/rescan`, {}); toast(r.message, !r.resolved); reload(); }),
+      act('Mark as Fixed', async () => { const r = await api(`finding/${id}/status`, { status: 'manual_fix_applied' }); toast(r.message || 'Updated', !r.resolved); reload(); }),
+      UNSUPPORTED.includes(f.step) ? act('Confirm Resolved (manual)', async () => { await api(`finding/${id}/status`, { status: 'resolved', reason: 'Manually confirmed' }); reload(); }) : null,
+      act('Accept Risk', () => modal('Accept Risk', [['reason', 'Reason (required)', 'Required for communication with a legacy terminal…'], ['approvedBy', 'Approved by'], ['expiry', 'Review date (YYYY-MM-DD)'], ['ticket', 'Ticket reference'], ['comment', 'Comment']], async v => { await api(`finding/${id}/status`, { status: 'accepted_risk', ...v }); reload(); })),
+      act('False Positive', () => modal('Mark as False Positive', [['reason', 'Reason (required)', 'This key belongs to a public Firebase configuration…']], async v => { await api(`finding/${id}/status`, { status: 'false_positive', ...v }); reload(); })),
+      act('Ignore', () => modal('Ignore finding', [['reason', 'Reason (optional)']], async v => { await api(`finding/${id}/status`, { status: 'ignored', ...v }); reload(); })),
+      f.status !== 'open' && f.status !== 'resolved' ? act('Reopen', async () => { await api(`finding/${id}/status`, { status: 'open', reason: 'Reopened' }); reload(); }) : null)),
+    sec('Ask AI', chat, h('div', { class: 'row', style: 'margin:6px 0' }, quick.map(x => h('button', { class: 'sm', disabled: !S.ai, onclick: () => ask(x) }, x))), q,
+      h('div', { class: 'row', style: 'margin-top:4px' }, h('button', { class: 'sm pri', disabled: !S.ai, onclick: () => { if (q.value.trim()) { ask(q.value.trim()); q.value = ''; } } }, 'Ask AI'))),
+    sec('Generate AI Fix', h('div', { class: 'row' }, mode, act('Generate AI Fix', async () => { fixBox.replaceChildren(h('div', { class: 'mut' }, 'Generating…')); try { showProposal(await api(`finding/${id}/fix`, { mode: mode.value })); } catch (e) { fixBox.replaceChildren(h('div', { class: 'bad' }, e.message)); } }, 'pri'),
+      f.canUndo ? act('Undo AI Fix', async () => { await api(`finding/${id}/undo`, {}); toast('AI fix reverted'); reload(); }) : null), fixBox),
+    f.history && f.history.length ? sec('History', h('div', { class: 'mut', style: 'font-size:12px' }, f.history.slice(-8).map(x => h('div', {}, `${fmtDate(x.t)} — ${x.e}${x.note ? ': ' + x.note : ''}`)))) : null);
+  if (focus === 'ask') q.focus();
+}
+
+function modal(title, fields, onOk) {
+  const m = $('modal'), body = $('modalBody'), vals = {};
+  const inputs = fields.map(([k, label, ph]) => { const i = h('input', { placeholder: ph || '' }); vals[k] = i; return h('div', { class: 'fld' }, h('label', {}, label), i); });
+  const ok = h('button', { class: 'pri' }, 'Save');
+  ok.onclick = guard(ok, async () => { const v = Object.fromEntries(Object.entries(vals).map(([k, i]) => [k, i.value])); await onOk(v); m.style.display = 'none'; });
+  body.replaceChildren(h('h3', { style: 'margin-top:0' }, title), ...inputs, h('div', { class: 'row', style: 'margin-top:10px' }, ok, h('button', { onclick: () => m.style.display = 'none' }, 'Cancel')));
+  m.style.display = 'grid';
+}
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') e.target.style.display = 'none'; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('modal').style.display = 'none'; closeDrawer(); } });
+$('foot').textContent = `Swiftec · Service Station Transformation — © ${new Date().getFullYear()} Moazzam Saleem. All rights reserved.`;
+load().catch(e => toast(e.message, true));
+</script>
+</body>
+</html>
