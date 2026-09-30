@@ -1,6 +1,6 @@
 # Security Center
 
-**Service Station Transformation** — a local security review tool for mobile and backend projects.
+**A local security review tool for mobile and backend projects.**
 
 It scans a project for secrets, vulnerabilities and misconfigurations, shows them in a dashboard by severity, and helps you fix them with optional AI assistance. Everything runs on your machine.
 
