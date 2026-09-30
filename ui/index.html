@@ -3,20 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Swiftec Security Center</title>
-<link rel="icon" type="image/png" href="/assets/logo-64.png">
-<link rel="apple-touch-icon" href="/assets/logo-180.png">
-<style>:root{color-scheme:light dark;--bg:#fff;--card:#fff;--fg:#1E2A3C;--mut:#616E82;--bd:#E5E7EB;--pri:#3188FF;--pri-soft:#E9F0FF;--crit:#ff3b30;--high:#ff9500;--med:#d99a00;--low:#3188FF;--info:#8e8e93;--ok:#1f9d55;--ok-soft:#E7F7EF;--code:#F3F4F6;--glass:rgba(255,255,255,.82);--shadow:0 1px 2px rgba(16,24,40,.04),0 10px 30px rgba(49,136,255,.10);--ease:cubic-bezier(.32,.72,0,1)}
-@media(prefers-color-scheme:dark){:root{--bg:#0b0f17;--card:#141a26;--fg:#f2f5fa;--mut:#9aa6b8;--bd:#263042;--pri:#3188FF;--pri-soft:#16294a;--crit:#ff6b60;--high:#ff9f0a;--med:#ffd60a;--low:#6aa9ff;--info:#8e8e93;--ok:#34c77b;--ok-soft:#10301f;--code:rgba(120,140,170,.16);--glass:rgba(20,26,38,.78);--shadow:0 10px 30px rgba(0,0,0,.5)}}
+<title>Security Center</title>
+<style>:root{color-scheme:dark;--bg:#0b1020;--card:#16223f;--fg:#f5f5f7;--mut:#a1a1a6;--bd:rgba(255,255,255,.16);--pri:#5eead4;--pri-soft:rgba(94,234,212,.14);--crit:#ff453a;--high:#ff9f0a;--med:#ffd60a;--low:#7dd3fc;--info:#636366;--ok:#30d158;--ok-soft:rgba(48,209,88,.14);--code:rgba(255,255,255,.08);--glass:rgba(15,27,61,.72);--shadow:0 10px 30px rgba(0,0,0,.6);--ease:cubic-bezier(.32,.72,0,1)}
+
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:14.5px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .4s}
-body{background:linear-gradient(135deg,#C9DEFF 0%,#E6F0FF 35%,#D5E6FF 70%,#EEF5FF 100%) fixed;min-height:100vh}
-@media(prefers-color-scheme:dark){body{background:linear-gradient(135deg,#0d1b33,#0b0f17 60%,#10203b) fixed}}
+body{background:linear-gradient(135deg,#0f1b3d 0%,#182a55 45%,#0e4a5c 100%) fixed;min-height:100vh}
+
 h1,h2{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif;letter-spacing:-.022em}
 .wrap{max-width:1760px;margin:0 auto;padding:22px clamp(16px,3vw,48px) 60px}
 .top{position:sticky;top:0;z-index:4;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(22px);backdrop-filter:saturate(180%) blur(22px);border-bottom:1px solid var(--bd)}
 .top>div{max-width:1760px;margin:0 auto;padding:10px clamp(16px,3vw,48px);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.logo{width:30px;height:30px;border-radius:8px;vertical-align:middle;margin-right:10px;box-shadow:0 1px 4px rgba(49,136,255,.35)}
+.logo{width:30px;height:30px;border-radius:8px;vertical-align:middle;margin-right:10px;box-shadow:0 1px 4px rgba(255,255,255,.2)}
 .tagline{letter-spacing:.14em;text-transform:uppercase;font-size:12px;font-weight:600;color:var(--pri)}
 .brand{display:flex;align-items:center;cursor:pointer;font-weight:600;font-size:17px;letter-spacing:-.01em;margin-right:auto}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:22px 26px;box-shadow:var(--shadow)}
@@ -24,7 +22,7 @@ h3{margin:18px 0 8px;font-size:12px;font-weight:600;text-transform:uppercase;let
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sp{flex:1}.mut{color:var(--mut)}.mono,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px}
 button{font:inherit;font-weight:500;border:0;background:var(--code);color:var(--fg);padding:7px 16px;border-radius:980px;cursor:pointer;transition:transform .1s ease-out,filter .2s,background .2s}
 button:hover{filter:brightness(.96)}button:active{transform:scale(.97)}
-button.pri{background:var(--pri);color:#fff}button.pri:hover{filter:brightness(1.06)}button:disabled{opacity:.45;cursor:not-allowed;transform:none}button.sm{padding:4px 12px;font-size:13px}
+button.pri{background:var(--pri);color:#06222a}button.pri:hover{filter:brightness(1.06)}button:disabled{opacity:.45;cursor:not-allowed;transform:none}button.sm{padding:4px 12px;font-size:13px}
 a{color:var(--pri);text-decoration:none}a:hover{text-decoration:underline}
 input,select,textarea{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:7px 11px;outline:0;transition:box-shadow .2s,border-color .2s}
 input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 25%,transparent)}textarea{width:100%}
@@ -46,7 +44,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--pri)}
 .home-h{font-size:40px;font-weight:700;letter-spacing:-.03em;margin:8px 0 4px}
 .steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 14px;margin:10px 0}.bar{height:6px;background:var(--code);border-radius:5px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri);border-radius:5px;transition:width .4s var(--ease)}
 .tabs{display:flex;align-items:center;gap:10px;margin:26px 0 14px;flex-wrap:wrap}
-.seg{display:inline-flex;background:rgba(255,255,255,.55);border:1px solid var(--bd);border-radius:11px;padding:3px}.seg div{padding:6px 16px;border-radius:9px;cursor:pointer;color:var(--mut);font-weight:500;transition:background .25s var(--ease),color .2s,box-shadow .25s}
+.seg{display:inline-flex;background:rgba(255,255,255,.08);border:1px solid var(--bd);border-radius:11px;padding:3px}.seg div{padding:6px 16px;border-radius:9px;cursor:pointer;color:var(--mut);font-weight:500;transition:background .25s var(--ease),color .2s,box-shadow .25s}
 .seg div.on{background:var(--card);color:var(--pri);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.14)}
 .lnk{font-size:13px;margin-left:12px}
 .grp{margin:22px 4px 8px;font-weight:600;font-size:13px;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
@@ -74,12 +72,25 @@ pre{background:var(--code);padding:10px 12px;border-radius:12px;overflow:auto;ma
 .pill.ok{background:var(--ok-soft)}.ok{color:var(--ok)}.bad{color:var(--crit)}
 .chips{display:flex;gap:10px;flex-wrap:wrap}.chip{border-radius:14px;padding:10px 16px;min-width:92px;text-align:center;background:var(--code)}.chip b{display:block;font-size:24px;letter-spacing:-.02em}
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation:none!important}#drawer{transition:opacity .2s!important}}
-@media(prefers-reduced-transparency:reduce){.top,#drawer,#modal,#toast{-webkit-backdrop-filter:none;backdrop-filter:none}.top,#drawer{background:var(--card)}}
+/* water-drop glass cards */
+:root{--gl-a:rgba(255,255,255,.14);--gl-b:rgba(255,255,255,.04);--gl-edge:rgba(255,255,255,.26);--gl-shadow:0 8px 32px rgba(0,0,0,.55),inset 0 1px 1px rgba(255,255,255,.3),inset 0 -8px 18px rgba(255,255,255,.04)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(480px 480px at 10% 15%,rgba(94,234,212,.22),transparent 70%),radial-gradient(520px 520px at 90% 25%,rgba(129,140,248,.25),transparent 70%),radial-gradient(500px 500px at 55% 95%,rgba(56,189,248,.18),transparent 70%)}
+.card,.tile,.f,#modal>div,.seg div.on{background:linear-gradient(135deg,var(--gl-a),var(--gl-b));border:1px solid var(--gl-edge);-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);box-shadow:var(--gl-shadow);position:relative}
+.card::before,.tile::before,.f::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.10),transparent 38%);pointer-events:none}
+.f{min-width:0;overflow:hidden}.f .mono{display:block;overflow-wrap:anywhere;word-break:break-all;white-space:normal}.f .row{min-width:0}.f .t{min-width:0;overflow-wrap:anywhere}.card,.tile{min-width:0;overflow-wrap:anywhere}
+.card .f,.card input,.card select,.card textarea{background:rgba(6,12,32,.45);-webkit-backdrop-filter:none;backdrop-filter:none}
+.card .f{border-color:rgba(255,255,255,.14)}.card .f.sel,.card .f[style*="--pri"]{background:rgba(94,234,212,.12)}
+.f b,.f .t{color:#fff}::placeholder{color:#b4bed6;opacity:1}
+:root{--mut:#c3cbe0}.f small:not(.critical):not(.high):not(.medium):not(.low):not(.info){color:#c3cbe0}
+.tile:hover,.f:hover{box-shadow:0 14px 40px rgba(0,0,0,.7),inset 0 1px 1px rgba(255,255,255,.45),inset 0 -8px 18px rgba(255,255,255,.06)}
+input,select,textarea{background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.seg div.on{background:rgba(94,234,212,.22);color:#fff;border:1px solid rgba(94,234,212,.45);box-shadow:none}.seg div:not(.on):hover{color:var(--fg);background:rgba(255,255,255,.08)}button:hover{background:rgba(255,255,255,.16)}button.pri:hover{background:#7ff3e0}
+@media(prefers-reduced-transparency:reduce){.top,#drawer,#modal,#toast{-webkit-backdrop-filter:none;backdrop-filter:none}.top,#drawer{background:var(--card)}.card,.tile,.f,#modal>div{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--card)}body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(480px 480px at 10% 15%,rgba(94,234,212,.22),transparent 70%),radial-gradient(520px 520px at 90% 25%,rgba(129,140,248,.25),transparent 70%),radial-gradient(500px 500px at 55% 95%,rgba(56,189,248,.18),transparent 70%)}
 </style>
 </head>
 <body>
 <div class="top"><div>
-  <span class="brand" id="brand" title="Home"><img class="logo" src="/assets/logo-128.png" alt="">Swiftec Security Center</span>
+  <span class="brand" id="brand" title="Home">Security Center</span>
   <button class="pri" id="bScan">New Scan</button>
   <button id="bRescan">Rescan</button>
   <button id="bChanged">Changed Files</button>
@@ -147,7 +158,7 @@ async function load() {
 }
 
 function renderHead() {
-  $('proj').textContent = S.project; document.title = S.project + ' — Swiftec Security Center'; $('rootPath').textContent = S.root; $('branch').textContent = '⎇ ' + S.branch; $('last').textContent = fmtDate(S.lastScan);
+  $('proj').textContent = S.project; document.title = S.project + ' — Security Center'; $('rootPath').textContent = S.root; $('branch').textContent = '⎇ ' + S.branch; $('last').textContent = fmtDate(S.lastScan);
   const st = $('state'); st.textContent = S.state; st.title = S.staleFile ? 'Changed since last scan: ' + S.staleFile : ''; st.className = 'pill ' + ({ 'Scan Completed': 'ok', 'Scan Failed': 'critical', 'Rescan Required': 'medium', Scanning: 'low' }[S.state] || 'info');
   donut();
   $('heroCard').style.display = tab === 'home' && !poll ? 'none' : '';
@@ -344,20 +355,20 @@ function homeView() {
   const sec = t => h('h3', { style: 'margin:30px 4px 12px' }, t);
   const link = (l, href) => h('a', { href, target: '_blank', class: 'lnk', style: 'margin:0 14px 0 0' }, l);
   return h('div', {},
-    h('div', { class: 'row', style: 'gap:18px;margin-top:6px' }, h('img', { src: '/assets/logo-128.png', alt: '', style: 'width:72px;height:72px;border-radius:18px;box-shadow:0 8px 24px rgba(49,136,255,.35)' }), h('div', {}, h('div', { class: 'home-h', style: 'margin:0' }, 'Swiftec Security Center'), h('div', { class: 'tagline', style: 'margin-top:6px' }, 'Service Station Transformation'))),
+    h('div', { class: 'row', style: 'gap:18px;margin-top:6px' }, h('div', {},h('div', { class: 'home-h', style: 'margin:0' }, 'Security Center'), h('div', { class: 'tagline', style: 'margin-top:6px' }, 'Service Station Transformation'))),
     h('div', { style: 'height:10px' }),
     h('div', { class: 'mut', style: 'font-size:16px' }, active && S.lastScan ? `${S.project} · ${open.length} open findings · score ${S.score}/100` : 'Scan your code, understand the risks, fix them, and verify.'),
     sec('Scan'),
     h('div', { class: 'tiles' },
-      tile(icon('folder'), 'var(--pri)', 'Scan a project', 'Whole folder: source, config, dependencies, secrets.', () => go('new', 'project')),
-      tile(icon('file'), '#5856d6', 'Scan a file', 'Pick one source or config file.', () => go('new', 'file')),
-      tile(icon('code'), '#34c759', 'Paste code', 'Check a snippet without saving a project.', () => go('new', 'code')),
-      tile(icon('diff'), '#ff9500', 'Changed files', 'Only git staged / modified files.', guard(document.createElement('button'), () => doScan('changed')))),
+      tile(icon('folder'), '#0d9488', 'Scan a project', 'Whole folder: source, config, dependencies, secrets.', () => go('new', 'project')),
+      tile(icon('file'), '#6366f1', 'Scan a file', 'Pick one source or config file.', () => go('new', 'file')),
+      tile(icon('code'), '#0ea5e9', 'Paste code', 'Check a snippet without saving a project.', () => go('new', 'code')),
+      tile(icon('diff'), '#8b5cf6', 'Changed files', 'Only git staged / modified files.', guard(document.createElement('button'), () => doScan('changed')))),
     active ? [sec('Results — ' + S.project),
       h('div', { class: 'tiles' },
-        tile(icon('shield'), 'var(--crit)', 'Findings', 'Everything the last scan found.', () => go('findings'), open.length),
-        tile(icon('package'), '#af52de', 'Dependencies', 'Known vulnerable packages.', () => go('deps'), deps),
-        tile(icon('history'), '#8e8e93', 'Scan history', 'Open and compare previous scans.', () => go('scans'), scans.length))] : [sec('Recent projects'), recentList()],
+        tile(icon('shield'), '#14b8a6', 'Findings', 'Everything the last scan found.', () => go('findings'), open.length),
+        tile(icon('package'), '#6366f1', 'Dependencies', 'Known vulnerable packages.', () => go('deps'), deps),
+        tile(icon('history'), '#64748b', 'Scan history', 'Open and compare previous scans.', () => go('scans'), scans.length))] : [sec('Recent projects'), recentList()],
     sec('Reports & settings'),
     !active ? h('div', { class: 'mut', style: 'margin-left:4px' }, `AI: ${S.ai || 'off'} · external scanners: ${(S.externalTools || []).join(', ') || 'none installed'}. Open a project to export its report.`) : h('div', { class: 'card' }, h('div', { class: 'row' }, h('b', {}, 'Export report'), link('HTML (printable / PDF)', `/api/export?fmt=html&token=${T}`), link('JSON', `/api/export?fmt=json&token=${T}`), link('CSV', `/api/export?fmt=csv&token=${T}`), h('span', { class: 'sp' }),
       h('button', { class: 'sm', onclick: async () => { if (confirm('Treat all current open findings as the baseline? Future scans will highlight only new issues.')) { const r = await api('baseline', {}); toast(`Baseline set (${r.baseline})`); load(); } } }, 'Set baseline')),
@@ -526,7 +537,7 @@ function modal(title, fields, onOk) {
 }
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal') e.target.style.display = 'none'; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('modal').style.display = 'none'; closeDrawer(); } });
-$('foot').textContent = `Swiftec · Service Station Transformation — © ${new Date().getFullYear()} Moazzam Saleem. All rights reserved.`;
+$('foot').textContent = `Service Station Transformation — © ${new Date().getFullYear()} Moazzam Saleem. All rights reserved.`;
 load().catch(e => toast(e.message, true));
 </script>
 </body>

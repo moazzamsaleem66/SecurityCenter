@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Run the Swiftec Security Center scan on the current Android/Kotlin/Flutter/iOS/Node project, review findings with specialised reviewer agents, and verify fixes by rescanning. Use when the user asks for a security scan/review/audit, to "scan the project", to fix or rescan a SEC-#### finding, or before a release.
+description: Run the Security Center scan on the current Android/Kotlin/Flutter/iOS/Node project, review findings with specialised reviewer agents, and verify fixes by rescanning. Use when the user asks for a security scan/review/audit, to "scan the project", to fix or rescan a SEC-#### finding, or before a release.
 ---
 
 # Security scan

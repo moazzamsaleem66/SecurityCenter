@@ -13,9 +13,9 @@ const pos = [];
 for (let i = 1; i < argv.length; i++) { const a = argv[i]; if (a.startsWith('--')) { if (VAL.has(a.slice(2))) i++; } else pos.push(a); }
 const root = path.resolve(pos[0] || '.');
 
-const HELP = `Swiftec Security Center — Service Station Transformation
+const HELP = `Security Center — Service Station Transformation
 
-  secscan serve   [path] [--port 4317]     open the Swiftec Security Center dashboard
+  secscan serve   [path] [--port 4317]     open the Security Center dashboard
   secscan scan    [path] [--changed] [--git-history] [--ai] [--no-external]
                          [--fail-on critical|high|medium] [--json out.json]
   secscan staged  [path]                   pre-commit: scan staged files for secrets/high findings
@@ -42,7 +42,7 @@ function table(scan) {
       const { start } = require('../src/server');
       const { lastProject } = require('../src/server');
       const r = await start(pos[0] ? root : lastProject() || root, +opt('port', 4317));
-      console.log(`Swiftec Security Center → ${r.url}\nPick the project folder in the page (Choose Folder). Add .secscan/ to that project's .gitignore.`);
+      console.log(`Security Center → ${r.url}\nPick the project folder in the page (Choose Folder). Add .secscan/ to that project's .gitignore.`);
       if (!flag('no-open')) { try { require('child_process').spawn(process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open', process.platform === 'win32' ? ['/c', 'start', r.url] : [r.url], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref(); } catch { /* ignore */ } }
     } else if (cmd === 'scan') {
       const s = await engine.scan(root, { mode: flag('changed') ? 'changed' : 'full', gitHistory: flag('git-history'), ai: flag('ai'), external: !flag('no-external') });
