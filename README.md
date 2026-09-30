@@ -24,21 +24,7 @@ Optional: install the Claude CLI (or set `ANTHROPIC_API_KEY`) to enable *Ask AI*
 
 Taken on the bundled demo project (`examples/demo-app`, dummy insecure code).
 
-**Home**
-
-![Home](docs/screenshots/home.png)
-
-**New Scan**
-
-![New Scan](docs/screenshots/new-scan.png)
-
-**Findings**
-
-![Findings](docs/screenshots/findings.png)
-
-**Scan history**
-
-![History](docs/screenshots/history.png)
+![Security Center](docs/screenshots/home.png)
 
 ### Example
 
