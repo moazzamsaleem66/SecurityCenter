@@ -1,0 +1,1 @@
+android { signingConfigs { release { storePassword 'Hunter2Hunter2!' } } }

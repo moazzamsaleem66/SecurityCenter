@@ -20,6 +20,36 @@ Open http://localhost:4317, click **New Scan**, choose a project folder, file, o
 
 Optional: install the Claude CLI (or set `ANTHROPIC_API_KEY`) to enable *Ask AI*, *Generate Fix* and AI review. Scanning itself is rule-based and uses no AI or tokens.
 
+## Screenshots
+
+Taken on the bundled demo project (`examples/demo-app`, dummy insecure code).
+
+| Home | New Scan |
+|---|---|
+| ![Home](docs/screenshots/home.png) | ![New Scan](docs/screenshots/new-scan.png) |
+
+| Findings | Finding details + AI fix |
+|---|---|
+| ![Findings](docs/screenshots/findings.png) | ![Finding details](docs/screenshots/finding-details.png) |
+
+| Scan history | Dependencies |
+|---|---|
+| ![History](docs/screenshots/history.png) | ![Dependencies](docs/screenshots/dependencies.png) |
+
+### Example
+
+Scanning the demo app produces findings like:
+
+```
+SEC-0001  CRITICAL  Firestore rules allow public read/write   firestore.rules:1
+SEC-0002  HIGH      TLS certificate validation disabled       lib/network/api_client.dart:5
+SEC-0003  HIGH      App is debuggable                         android/app/src/main/AndroidManifest.xml:3
+SEC-0004  HIGH      Hardcoded credential                      android/app/build.gradle:1
+SEC-0005  MEDIUM    Sensitive data written to log             lib/services/session_service.dart:2
+```
+
+Try it yourself: `node bin/secscan.js serve examples/demo-app`.
+
 ## Features
 
 - **Dashboard:** severity donut, findings grid, dependencies, scan history with trend chart and scan comparison
