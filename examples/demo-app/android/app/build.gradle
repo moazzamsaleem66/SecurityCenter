@@ -1,1 +1,5 @@
 android { signingConfigs { release { storePassword 'Hunter2Hunter2!' } } }
+dependencies {
+    implementation 'commons-io:commons-io:2.11.0'
+    testImplementation 'junit:junit:4.12'
+}

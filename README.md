@@ -24,28 +24,34 @@ Optional: install the Claude CLI (or set `ANTHROPIC_API_KEY`) to enable *Ask AI*
 
 Taken on the bundled demo project (`examples/demo-app`, dummy insecure code).
 
-| Home | New Scan |
-|---|---|
-| ![Home](docs/screenshots/home.png) | ![New Scan](docs/screenshots/new-scan.png) |
+**Home**
 
-| Findings | Finding details + AI fix |
-|---|---|
-| ![Findings](docs/screenshots/findings.png) | ![Finding details](docs/screenshots/finding-details.png) |
+![Home](docs/screenshots/home.png)
 
-| Scan history | Dependencies |
-|---|---|
-| ![History](docs/screenshots/history.png) | ![Dependencies](docs/screenshots/dependencies.png) |
+**New Scan**
+
+![New Scan](docs/screenshots/new-scan.png)
+
+**Findings**
+
+![Findings](docs/screenshots/findings.png)
+
+**Scan history**
+
+![History](docs/screenshots/history.png)
 
 ### Example
 
 Scanning the demo app produces findings like:
 
 ```
-SEC-0001  CRITICAL  Firestore rules allow public read/write   firestore.rules:1
-SEC-0002  HIGH      TLS certificate validation disabled       lib/network/api_client.dart:5
-SEC-0003  HIGH      App is debuggable                         android/app/src/main/AndroidManifest.xml:3
-SEC-0004  HIGH      Hardcoded credential                      android/app/build.gradle:1
-SEC-0005  MEDIUM    Sensitive data written to log             lib/services/session_service.dart:2
+SEC-0010  CRITICAL  Firebase rules allow unauthenticated access          firestore.rules:1
+SEC-0002  HIGH      Possible Keystore/Signing Password Exposed           android/app/build.gradle:1
+SEC-0005  HIGH      android:debuggable="true"                            android/app/src/main/AndroidManifest.xml:2
+SEC-0007  HIGH      Cleartext traffic enabled                            android/app/src/main/AndroidManifest.xml:2
+SEC-0008  HIGH      Exported service without permission: .SyncService    android/app/src/main/AndroidManifest.xml:3
+SEC-0003  HIGH      Insecure TLS Certificate Validation                  lib/network/api_client.dart:5
+SEC-0001  HIGH      Sensitive data written to log                        lib/services/session_service.dart:2
 ```
 
 Try it yourself: `node bin/secscan.js serve examples/demo-app`.
